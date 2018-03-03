@@ -688,7 +688,9 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
     @Override
     public void clearMetaData() {
         this.curAttribute = null;
-        this.columnOrder = SWT.NONE;
+        if (this.columnOrder != SWT.NONE) {
+            this.columnOrder = SWT.DEFAULT;
+        }
     }
 
     @Override
@@ -1832,6 +1834,42 @@ public class SpreadsheetPresentation extends AbstractPresentation implements IRe
             super.updateValue(value, updatePresentation);
             if (updatePresentation) {
                 spreadsheet.redrawGrid();
+            }
+        }
+
+        @Override
+        public void updateSelectionValue(Object value) {
+            DBDAttributeBinding origAttr = getBinding();
+            ResultSetRow origRow = getCurRow();
+            try {
+                Collection<GridPos> ssSelection = spreadsheet.getSelection();
+                for (GridPos pos : ssSelection) {
+                    DBDAttributeBinding attr;
+                    ResultSetRow row;
+                    if (controller.isRecordMode()) {
+                        attr = (DBDAttributeBinding) spreadsheet.getRowElement(pos.row);
+                        row = controller.getCurrentRow();
+                    } else {
+                        attr = (DBDAttributeBinding) spreadsheet.getColumnElement(pos.col);
+                        row = (ResultSetRow) spreadsheet.getRowElement(pos.row);
+                    }
+                    if (attr == null || row == null) {
+                        continue;
+                    }
+                    if (attr.getValueHandler() != origAttr.getValueHandler()) {
+                        continue;
+                    }
+                    if (controller.isAttributeReadOnly(attr)) {
+                        // No inline editors for readonly columns
+                        continue;
+                    }
+                    setBinding(attr);
+                    setCurRow(row);
+                    updateValue(value, true);
+                }
+            } finally {
+                setBinding(origAttr);
+                setCurRow(origRow);
             }
         }
 

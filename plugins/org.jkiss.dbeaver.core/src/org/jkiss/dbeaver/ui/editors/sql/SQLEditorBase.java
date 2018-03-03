@@ -109,11 +109,17 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         syntaxManager = new SQLSyntaxManager();
         ruleManager = new SQLRuleManager(syntaxManager);
         themeListener = new IPropertyChangeListener() {
+            long lastUpdateTime = 0;
             @Override
             public void propertyChange(PropertyChangeEvent event)
             {
                 if (event.getProperty().equals(IThemeManager.CHANGE_CURRENT_THEME) ||
                     event.getProperty().startsWith("org.jkiss.dbeaver.sql.editor")) {
+                    if (lastUpdateTime > 0 && System.currentTimeMillis() - lastUpdateTime < 500) {
+                        // Do not update too often (theme change may trigger this hundreds of times)
+                        return;
+                    }
+                    lastUpdateTime = System.currentTimeMillis();
                     reloadSyntaxRules();
                     // Reconfigure to let comments/strings colors to take effect
                     getSourceViewer().configure(getSourceViewerConfiguration());
@@ -427,7 +433,11 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
                 new SQLPartitionScanner(dialect),
                 SQLPartitionScanner.SQL_CONTENT_TYPES);
             partitioner.connect(document);
-            document.setDocumentPartitioner(SQLPartitionScanner.SQL_PARTITIONING, partitioner);
+            try {
+                document.setDocumentPartitioner(SQLPartitionScanner.SQL_PARTITIONING, partitioner);
+            } catch (Throwable e) {
+                log.warn("Error setting SQL partitioner", e); //$NON-NLS-1$
+            }
 
             ProjectionViewer projectionViewer = (ProjectionViewer) getSourceViewer();
             if (projectionViewer != null && projectionViewer.getAnnotationModel() != null && document.getLength() > 0) {
@@ -643,7 +653,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         ruleManager.endEval();
     }
 
-    public List<SQLScriptElement> extractScriptQueries(int startOffset, int length, boolean scriptMode, boolean keepDelimiters)
+    public List<SQLScriptElement> extractScriptQueries(int startOffset, int length, boolean scriptMode, boolean keepDelimiters, boolean parseParameters)
     {
         List<SQLScriptElement> queryList = new ArrayList<>();
 
@@ -667,7 +677,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
             this.endScriptEvaluation();
         }
 
-        if (getActivePreferenceStore().getBoolean(ModelPreferences.SQL_PARAMETERS_ENABLED)) {
+        if (parseParameters && getActivePreferenceStore().getBoolean(ModelPreferences.SQL_PARAMETERS_ENABLED)) {
             // Parse parameters
             for (SQLScriptElement query : queryList) {
                 if (query instanceof SQLQuery) {
@@ -699,6 +709,10 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
             int tokenOffset = ruleManager.getTokenOffset();
             int tokenLength = ruleManager.getTokenLength();
             int tokenType = token instanceof SQLToken ? ((SQLToken)token).getType() : SQLToken.T_UNKNOWN;
+            if (tokenOffset < startPos) {
+                // This may happen with EOF tokens (bug in jface?)
+                return null;
+            }
 
             boolean isDelimiter = tokenType == SQLToken.T_DELIMITER;
             boolean isControl = false;

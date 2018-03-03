@@ -6,7 +6,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <dbeaver-version>4.2.2</dbeaver-version>
+        <dbeaver-version>4.2.3</dbeaver-version>
         <dbeaver-product>DBeaver</dbeaver-product>
         <tycho-version>1.0.0</tycho-version>
         <tycho-versions-version>0.26.0</tycho-versions-version>
@@ -20,7 +20,9 @@
         <module>modules/org.jkiss.utils</module>
         <module>modules/org.jkiss.wmi</module>
 
+        <module>plugins/org.jkiss.dbeaver.runtime.ide.core</module>
         <module>plugins/org.jkiss.dbeaver.core</module>
+        <module>plugins/org.jkiss.dbeaver.ui</module>
         <module>plugins/org.jkiss.dbeaver.core.application</module>
         <module>plugins/org.jkiss.dbeaver.core.eclipse</module>
         <module>plugins/org.jkiss.dbeaver.ext.db2</module>
@@ -66,6 +68,8 @@
 
         <module>product/updateSite</module>
         <module>product/standalone</module>
+
+        <module>tests/org.jkiss.dbeaver.runtime.ide.core.tests</module>
     </modules>
 
     <repositories>
@@ -149,8 +153,8 @@
                 <artifactId>tycho-compiler-plugin</artifactId>
                 <version>${tycho-version}</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                     <compilerArgument>-warn:+discouraged,forbidden</compilerArgument>
                 </configuration>
             </plugin>
