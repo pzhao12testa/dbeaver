@@ -176,6 +176,11 @@ public final class SQLUtils {
         return result.toString();
     }
 
+    public static String makeSQLLike(String like)
+    {
+        return like.replace("*", "%");
+    }
+
     public static boolean matchesLike(String string, String like)
     {
         Pattern pattern = Pattern.compile(makeLikePattern(like), Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
@@ -279,6 +284,7 @@ public final class SQLUtils {
 
     public static void appendLikeCondition(StringBuilder sql, String value, boolean not)
     {
+        value = makeSQLLike(value);
         if (value.contains("%") || value.contains("_")) {
             if (not) sql.append(" NOT");
             sql.append(" LIKE ?");
@@ -776,7 +782,7 @@ public final class SQLUtils {
                 String startQuote = quotePair[0];
                 String endQuote = quotePair[1];
                 if (!CommonUtils.isEmpty(startQuote) && !CommonUtils.isEmpty(endQuote) && name.startsWith(startQuote)) {
-                    int endPos = name.indexOf(endQuote);
+                    int endPos = name.indexOf(endQuote, startQuote.length());
                     if (endPos != -1) {
                         // Quoted part
                         nameList.add(name.substring(startQuote.length(), endPos));

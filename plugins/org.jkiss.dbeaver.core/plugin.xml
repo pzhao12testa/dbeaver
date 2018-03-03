@@ -187,6 +187,13 @@
                 allowMultiple="true"
                 icon="icons/sql/page_data_grid.png"
                 name="%view.sql.results.title"/>
+        <view
+                id="org.jkiss.dbeaver.core.databaseOutput"
+                category="org.jkiss.dbeaver.core.category"
+                class="org.jkiss.dbeaver.ui.views.DatabaseOutputView"
+                allowMultiple="false"
+                icon="icons/sql/page_output.png"
+                name="%view.database.output.title"/>
     </extension>
 
     <extension point="org.eclipse.ui.commands">
@@ -2884,6 +2891,16 @@
                 <property id="pattern" label="URL pattern" type="string" description="URL pattern. Variable ${value} will be replaced with real value." defaultValue="http://${value}" required="false"/>
             </propertyGroup>
         </transformer>
+        <transformer
+                class="org.jkiss.dbeaver.model.impl.data.transformers.UUIDAttributeTransformer"
+                id="org.jkiss.dbeaver.core.UUIDAttributeTransformer"
+                name="UUID"
+                description="Represents binary value as UUID."
+                applyByDefault="false"
+                custom="true">
+            <type kind="BINARY"/>
+            <type kind="CONTENT"/>
+        </transformer>
 
     </extension>
 
@@ -2969,6 +2986,7 @@
             <supports kind="DOCUMENT"/>
             <supports kind="ROWID"/>
             <supports kind="ANY"/>
+            <supports typeName="REFCURSOR"/>
         </manager>
         <manager class="org.jkiss.dbeaver.ui.data.managers.BitStringValueManager" id="org.jkiss.dbeaver.ui.data.managers.BitStringValueManager">
             <supports typeName="BIT"/>
