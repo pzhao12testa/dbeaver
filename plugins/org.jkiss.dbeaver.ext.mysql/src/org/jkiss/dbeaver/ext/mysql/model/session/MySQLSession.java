@@ -89,7 +89,6 @@ public class MySQLSession implements DBAServerSession {
     }
 
     @Override
-    @Property(viewable = true, order = 8)
     public String getActiveQuery()
     {
         return info;

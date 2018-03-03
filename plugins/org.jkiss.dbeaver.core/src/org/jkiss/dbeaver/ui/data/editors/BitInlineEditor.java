@@ -17,8 +17,6 @@
 package org.jkiss.dbeaver.ui.data.editors;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.jkiss.code.Nullable;
@@ -40,12 +38,6 @@ public class BitInlineEditor extends BaseValueEditor<Combo> {
         editor.add(Boolean.FALSE.toString()); //$NON-NLS-1$
         editor.add(Boolean.TRUE.toString()); //$NON-NLS-1$
         editor.setEnabled(!valueController.isReadOnly());
-        editor.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                saveValue();
-            }
-        });
         return editor;
     }
 

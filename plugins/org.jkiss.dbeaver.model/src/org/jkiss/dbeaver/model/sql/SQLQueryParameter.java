@@ -16,8 +16,6 @@
  */
 package org.jkiss.dbeaver.model.sql;
 
-import org.jkiss.dbeaver.utils.GeneralUtils;
-
 /**
  * SQL statement parameter info
  */
@@ -25,18 +23,12 @@ public class SQLQueryParameter {
     private int ordinalPosition;
     private String name;
     private String value;
-    private final int tokenOffset;
-    private final int tokenLength;
+    private int tokenOffset;
+    private int tokenLength;
     private SQLQueryParameter previous;
 
     public SQLQueryParameter(int ordinalPosition, String name, int tokenOffset, int tokenLength)
     {
-        if (tokenOffset < 0) {
-            throw new IndexOutOfBoundsException("Bad parameter offset: " + tokenOffset);
-        }
-        if (tokenLength <= 0) {
-            throw new IndexOutOfBoundsException("Bad parameter length: " + tokenLength);
-        }
         this.ordinalPosition = ordinalPosition;
         this.name = name.trim();
         this.tokenOffset = tokenOffset;
@@ -84,9 +76,7 @@ public class SQLQueryParameter {
     }
 
     public String getTitle() {
-        if (GeneralUtils.isVariablePattern(name)) {
-            return GeneralUtils.stripVariablePattern(name);
-        } else if (name.startsWith(":")) {
+        if (name.startsWith(":")) {
             return name.substring(1);
         } else {
             return name;

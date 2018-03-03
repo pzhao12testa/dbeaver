@@ -415,14 +415,12 @@ public class DBVEntity extends DBVObject implements DBSEntity, DBPQualifiedObjec
             return;
         }
         final String attrName = attribute.getName();
-        colorOverrides.removeIf(c -> c.getAttributeName().equals(attrName));
-    }
-
-    public void removeAllColorOverride() {
-        if (colorOverrides == null) {
-            return;
+        for (Iterator<DBVColorOverride> iterator = colorOverrides.iterator(); iterator.hasNext(); ) {
+            DBVColorOverride c = iterator.next();
+            if (c.getAttributeName().equals(attrName)) {
+                iterator.remove();
+            }
         }
-        colorOverrides.clear();
     }
 
     @Override

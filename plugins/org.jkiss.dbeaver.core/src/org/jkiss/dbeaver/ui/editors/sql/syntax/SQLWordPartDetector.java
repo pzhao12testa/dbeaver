@@ -21,7 +21,6 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.jkiss.dbeaver.model.sql.SQLDialect;
 import org.jkiss.dbeaver.model.sql.SQLSyntaxManager;
-import org.jkiss.utils.CommonUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,11 +49,6 @@ public class SQLWordPartDetector extends SQLIdentifierDetector
      * @param documentOffset into the SQL document
      */
     public SQLWordPartDetector(IDocument document, SQLSyntaxManager syntaxManager, int documentOffset)
-    {
-        this(document, syntaxManager, documentOffset, 1);
-    }
-
-    public SQLWordPartDetector(IDocument document, SQLSyntaxManager syntaxManager, int documentOffset, int prevWordsParse)
     {
         super(syntaxManager.getStructSeparator(), syntaxManager.getQuoteStrings());
         cursorOffset = documentOffset;
@@ -130,23 +124,13 @@ public class SQLWordPartDetector extends SQLIdentifierDetector
                 String prevWord = document.get(prevOffset, prevStartOffset - prevOffset);
                 SQLDialect dialect = syntaxManager.getDialect();
                 if (dialect.isEntityQueryWord(prevWord) || dialect.isAttributeQueryWord(prevWord)) {
-                    if (CommonUtils.isEmpty(prevKeyWord)) {
-                        this.prevKeyWord = prevWord.toUpperCase(Locale.ENGLISH);
-                        if (prevWordsParse <= 1) {
-                            break;
-                        }
-                    } else {
-                        if (prevWords != null && prevWords.size() >= prevWordsParse) {
-                            break;
-                        }
-                    }
+                    this.prevKeyWord = prevWord.toUpperCase(Locale.ENGLISH);
+                    break;
                 }
                 if (prevWords == null) {
                     prevWords = new ArrayList<>();
-                } else {
-                    // Add only second word (first is in prevKeyword)
-                    prevWords.add(prevWord);
                 }
+                prevWords.add(prevWord);
                 prevOffset--;
             }
         } catch (BadLocationException e) {

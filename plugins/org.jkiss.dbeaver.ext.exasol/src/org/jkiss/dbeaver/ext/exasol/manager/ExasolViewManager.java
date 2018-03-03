@@ -18,13 +18,11 @@
 package org.jkiss.dbeaver.ext.exasol.manager;
 
 import java.util.List;
-import java.util.Map;
 
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.ext.exasol.model.ExasolSchema;
 import org.jkiss.dbeaver.ext.exasol.model.ExasolTableBase;
 import org.jkiss.dbeaver.ext.exasol.model.ExasolView;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
@@ -41,7 +39,7 @@ public class ExasolViewManager
         extends SQLObjectEditor<ExasolView, ExasolSchema> implements DBEObjectRenamer<ExasolView> {
 
     @Override
-    public long getMakerOptions(DBPDataSource dataSource)
+    public long getMakerOptions()
     {
         return FEATURE_EDITOR_ON_CREATE;
     }
@@ -79,14 +77,14 @@ public class ExasolViewManager
 
     @Override
     protected void addObjectCreateActions(List<DBEPersistAction> actions,
-                                          ObjectCreateCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolView, ExasolSchema>.ObjectCreateCommand command) 
     {
         createOrReplaceViewQuery(actions, command.getObject(), false);
     }
 
     @Override
     protected void addObjectDeleteActions(List<DBEPersistAction> actions,
-                                          ObjectDeleteCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolView, ExasolSchema>.ObjectDeleteCommand command)
     {
         ExasolView view = (ExasolView) command.getObject();
         actions.add(
@@ -97,7 +95,7 @@ public class ExasolViewManager
     
     @Override
     protected void addObjectModifyActions(List<DBEPersistAction> actionList,
-                                          ObjectChangeCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolView, ExasolSchema>.ObjectChangeCommand command)  
     {
         createOrReplaceViewQuery(actionList, command.getObject(), true);
     }
@@ -125,7 +123,7 @@ public class ExasolViewManager
     
     @Override
     protected void addObjectRenameActions(List<DBEPersistAction> actions,
-                                          ObjectRenameCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolView, ExasolSchema>.ObjectRenameCommand command)
     {
         ExasolView obj = command.getObject();
         actions.add(

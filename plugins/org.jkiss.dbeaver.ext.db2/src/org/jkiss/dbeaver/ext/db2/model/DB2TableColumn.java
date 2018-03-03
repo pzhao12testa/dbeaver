@@ -99,7 +99,7 @@ public class DB2TableColumn extends JDBCTableColumn<DB2TableBase>
         setRequired(JDBCUtils.safeGetBoolean(dbResult, "NULLS", DB2YesNo.N.name()));
         setDefaultValue(JDBCUtils.safeGetString(dbResult, "DEFAULT"));
         setMaxLength(JDBCUtils.safeGetInt(dbResult, "LENGTH"));
-        setScale(JDBCUtils.safeGetInteger(dbResult, "SCALE"));
+        setScale(JDBCUtils.safeGetInt(dbResult, "SCALE"));
 
         this.hidden = CommonUtils.valueOf(DB2ColumnHiddenState.class, JDBCUtils.safeGetString(dbResult, "HIDDEN"));
         this.identity = JDBCUtils.safeGetBoolean(dbResult, "IDENTITY", DB2YesNo.Y.name());
@@ -253,7 +253,7 @@ public class DB2TableColumn extends JDBCTableColumn<DB2TableBase>
 
     @Override
     @Property(viewable = true, valueRenderer = DBPositiveNumberTransformer.class, order = 39)
-    public Integer getScale()
+    public int getScale()
     {
         return super.getScale();
     }
@@ -278,7 +278,7 @@ public class DB2TableColumn extends JDBCTableColumn<DB2TableBase>
 
     @Override
     @Property(viewable = false, valueRenderer = DBPositiveNumberTransformer.class, order = 42)
-    public Integer getPrecision()
+    public int getPrecision()
     {
         return super.getPrecision();
     }

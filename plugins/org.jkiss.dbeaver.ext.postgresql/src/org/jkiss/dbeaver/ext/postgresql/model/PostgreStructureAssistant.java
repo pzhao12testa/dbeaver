@@ -160,10 +160,6 @@ public class PostgreStructureAssistant extends JDBCStructureAssistant
                     final String tableName = JDBCUtils.safeGetString(dbResult, "relname");
                     final PostgreClass.RelKind tableType = PostgreClass.RelKind.valueOf(JDBCUtils.safeGetString(dbResult, "relkind"));
                     final PostgreSchema tableSchema = dataSource.getDefaultInstance().getSchema(session.getProgressMonitor(), schemaId);
-                    if (tableSchema == null) {
-                        log.debug("Can't resolve table '" + tableName + "' - owner schema " + schemaId + " not found");
-                        continue;
-                    }
                     objects.add(new AbstractObjectReference(tableName, tableSchema, null,
                         tableType == PostgreClass.RelKind.r ? PostgreTable.class :
                             (tableType == PostgreClass.RelKind.v ? PostgreView.class : PostgreMaterializedView.class),

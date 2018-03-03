@@ -19,13 +19,11 @@
 
 <plugin>
 
-    <extension-point id="org.jkiss.dbeaver.ext.erd.export.format" name="%extension-point.org.jkiss.dbeaver.ext.erd.export.format.name" schema="schema/org.jkiss.dbeaver.ext.erd.export.format.exsd"/>
-
     <extension point="org.eclipse.core.contenttype.contentTypes">
         <content-type
                 file-extensions="erd"
                 id="org.jkiss.dbeaver.erd"
-                name="%content-type.org.jkiss.dbeaver.erd.name"
+                name="ER Diagram"
                 priority="normal"/>
     </extension>
 
@@ -38,7 +36,7 @@
             description="%editor.erd.description"
             position="additions_end"
             icon="icons/erd.png">
-            <objectType name="org.jkiss.dbeaver.model.struct.DBSObjectContainer" forceCheck="true" if="context.isEntityContainer(object)"/>
+            <objectType name="org.jkiss.dbeaver.model.struct.DBSObjectContainer" forceCheck="true"/>
             <objectType name="org.jkiss.dbeaver.model.struct.DBSEntity" forceCheck="true"/>
         </editor>
     </extension>
@@ -162,80 +160,80 @@
 
     <extension point="org.eclipse.ui.themes">
         <themeElementCategory
-                label="%themeElementCategory.org.jkiss.dbeaver.ui.presentation.erd.label"
+                label="Diagrams"
                 id="org.jkiss.dbeaver.ui.presentation.erd">
             <description>
-                %themeElementCategory.org.jkiss.dbeaver.ui.presentation.erd.description
+                ERD Diagrams
             </description>
         </themeElementCategory>
         <fontDefinition
-                label="%fontDefinition.org.jkiss.dbeaver.erd.diagram.font.label"
+                label="Diagram font"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.font">
-            <description>%fontDefinition.org.jkiss.dbeaver.erd.diagram.font.description</description>
+            <description>The diagram font is used for diagram entity and attribute names.</description>
         </fontDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.background.label"
+                label="Diagram background"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.background"
                 value="COLOR_LIST_BACKGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.background.description</description>
+            <description>Diagram background</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.regular.background.label"
+                label="Entity background"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.entity.regular.background"
                 value="COLOR_INFO_BACKGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.regular.background.description</description>
+            <description>Regular entity background</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.primary.background.label"
+                label="Primary entity background"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.entity.primary.background"
                 value="255,128,64">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.primary.background.description</description>
+            <description>Primary entity background</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.association.background.label"
+                label="Association entity background"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.entity.association.background"
                 value="COLOR_LIST_BACKGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.association.background.description</description>
+            <description>Association entity background</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.name.foreground.label"
+                label="Entity name foreground"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.entity.name.foreground"
                 value="COLOR_INFO_FOREGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.entity.name.foreground.description</description>
+            <description>Entity name foreground</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.attributes.background.label"
+                label="Attributes background"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.attributes.background"
                 value="COLOR_LIST_BACKGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.attributes.background.description</description>
+            <description>Attribute name background</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.attributes.foreground.label"
+                label="Attributes foreground"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.attributes.foreground"
                 value="COLOR_LIST_FOREGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.attributes.foreground.description</description>
+            <description>Attribute name foreground</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.notes.foreground.label"
+                label="Notes foreground"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.notes.foreground"
                 value="COLOR_INFO_FOREGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.notes.foreground.description</description>
+            <description>Diagram notes foreground</description>
         </colorDefinition>
         <colorDefinition
-                label="%colorDefinition.org.jkiss.dbeaver.erd.diagram.notes.background.label"
+                label="Notes background"
                 categoryId="org.jkiss.dbeaver.ui.presentation.erd"
                 id="org.jkiss.dbeaver.erd.diagram.notes.background"
                 value="COLOR_INFO_BACKGROUND">
-            <description>%colorDefinition.org.jkiss.dbeaver.erd.diagram.notes.background.description</description>
+            <description>Diagram notes background</description>
         </colorDefinition>
 
 
@@ -257,7 +255,7 @@
     </extension>
 
     <extension point="org.eclipse.ui.propertyPages">
-        <page id="org.jkiss.dbeaver.preferences.erd.general" class="org.jkiss.dbeaver.ext.erd.editor.ERDPreferencePage" name="%page.org.jkiss.dbeaver.preferences.erd.general.name">
+        <page id="org.jkiss.dbeaver.preferences.erd.general" class="org.jkiss.dbeaver.ext.erd.editor.ERDPreferencePage" name="General Settings">
            <enabledWhen>
               <instanceof value="org.jkiss.dbeaver.ext.erd.editor.ERDEditorPart"/>
            </enabledWhen>
@@ -274,12 +272,12 @@
             default-charset="utf-8"
             file-extensions="erd"
             id="org.jkiss.dbeaver.erd.content-type-erd"
-            name="%content-type.org.jkiss.dbeaver.erd.content-type-erd.name"
+            name="ERD"
             priority="normal"/>
     </extension>
 
     <extension point="org.eclipse.ui.editors">
-        <editor name="%editor.org.jkiss.dbeaver.ext.erd.editor.ERDEditorStandalone.name"
+        <editor name="ERD Editor"
                 extensions="erd"
                 icon="icons/erd.png"
                 contributorClass="org.jkiss.dbeaver.ext.erd.editor.ERDEditorContributor"
@@ -290,7 +288,7 @@
     </extension>
 
     <extension point="org.eclipse.ui.commands">
-        <command id="org.jkiss.dbeaver.erd.diagram.create" name="%command.org.jkiss.dbeaver.erd.diagram.create.name" description="%command.org.jkiss.dbeaver.erd.diagram.create.description" categoryId="org.jkiss.dbeaver.core.navigator"/>
+        <command id="org.jkiss.dbeaver.erd.diagram.create" name="Create ERD" description="Create ER diagram" categoryId="org.jkiss.dbeaver.core.navigator"/>
     </extension>
 
     <extension point="org.eclipse.ui.commandImages">
@@ -344,13 +342,6 @@
         <perspectiveExtension targetID="org.jkiss.dbeaver.core.perspective">
             <newWizardShortcut id="org.jkiss.dbeaver.ext.erd.navigator.DiagramCreateWizard"/>
         </perspectiveExtension>
-    </extension>
-
-    <extension point="org.jkiss.dbeaver.ext.erd.export.format">
-        <exportFormat ext="png" label="PNG format" class="org.jkiss.dbeaver.ext.erd.export.ERDExportRasterImage"/>
-        <exportFormat ext="gif" label="GIF format" class="org.jkiss.dbeaver.ext.erd.export.ERDExportRasterImage"/>
-        <exportFormat ext="bmp" label="BMP format" class="org.jkiss.dbeaver.ext.erd.export.ERDExportRasterImage"/>
-        <exportFormat ext="graphml" label="GraphML format" class="org.jkiss.dbeaver.ext.erd.export.ERDExportGraphML"/>
     </extension>
 
 </plugin>

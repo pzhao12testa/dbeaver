@@ -30,7 +30,6 @@ import org.jkiss.dbeaver.model.struct.rdb.DBSTableIndex;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * PostgreViewBase
@@ -77,17 +76,13 @@ public abstract class PostgreViewBase extends PostgreTableReal
 
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException
     {
         if (source == null) {
             if (isPersisted()) {
                 try (JDBCSession session = DBUtils.openMetaSession(monitor, getDataSource(), "Read view definition")) {
                     String definition = JDBCUtils.queryString(session, "SELECT pg_get_viewdef(?, true)", getObjectId());
                     this.source = PostgreUtils.getViewDDL(this, definition);
-                    String extDefinition = readExtraDefinition(session, options);
-                    if (extDefinition != null) {
-                        this.source += "\n" + extDefinition;
-                    }
                 } catch (SQLException e) {
                     throw new DBException("Error reading view definition", e);
                 }
@@ -96,10 +91,6 @@ public abstract class PostgreViewBase extends PostgreTableReal
             }
         }
         return source;
-    }
-
-    protected String readExtraDefinition(JDBCSession session, Map<String, Object> options) throws DBException {
-        return null;
     }
 
     @Override

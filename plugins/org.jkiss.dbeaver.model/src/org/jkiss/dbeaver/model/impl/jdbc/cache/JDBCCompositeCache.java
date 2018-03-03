@@ -326,11 +326,7 @@ public abstract class JDBCCompositeCache<
                             //log.debug("Object '" + objectName + "' metadata corrupted - NULL child returned");
                             continue;
                         }
-                        for (ROW_REF row : rowRef) {
-                            if (row != null) {
-                                objectInfo.rows.add(row);
-                            }
-                        }
+                        Collections.addAll(objectInfo.rows, rowRef);
                     }
                 }
                 finally {

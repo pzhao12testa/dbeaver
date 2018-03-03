@@ -20,36 +20,14 @@ package org.jkiss.dbeaver.ext.postgresql.model;
  * PostgrePrivilegeType
  */
 public enum PostgrePrivilegeType {
-    // ALL privs
-    ALL(Object.class, false),
-    // TABLE privs
-    SELECT(PostgreTableBase.class, true),
-    INSERT(PostgreTableReal.class, true),
-    UPDATE(PostgreTableBase.class,true),
-    DELETE(PostgreTableReal.class,true),
-    TRUNCATE(PostgreTableReal.class,true),
-    REFERENCES(PostgreTableReal.class,true),
-    TRIGGER(PostgreTableReal.class,true),
-    // SEQUENCE privs
-    USAGE(PostgreSequence.class, true),
-
-    UNKNOWN(Object.class, false);
-
-    private final Class<?> targetType;
-    private final boolean valid;
-
-    PostgrePrivilegeType(Class<?> targetType, boolean valid) {
-        this.targetType = targetType;
-        this.valid = valid;
-    }
-
-    public Class<?> getTargetType() {
-        return targetType;
-    }
-
-    public boolean isValid() {
-        return valid;
-    }
+    SELECT,
+    INSERT,
+    UPDATE,
+    DELETE,
+    TRUNCATE,
+    REFERENCES,
+    TRIGGER,
+    UNKNOWN;
 
     public static PostgrePrivilegeType fromString(String type) {
         try {

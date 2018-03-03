@@ -48,7 +48,6 @@ public class SQLSyntaxManager {
     private char anonymousParameterMark;
     private char namedParameterPrefix;
     private String controlCommandPrefix;
-    private boolean variablesEnabled;
     @NotNull
     private String catalogSeparator = String.valueOf(SQLConstants.STRUCT_SEPARATOR);
     @NotNull
@@ -122,10 +121,6 @@ public class SQLSyntaxManager {
         return controlCommandPrefix;
     }
 
-    public boolean isVariablesEnabled() {
-        return variablesEnabled;
-    }
-
     public void init(@NotNull DBPDataSource dataSource) {
         init(SQLUtils.getDialectFromObject(dataSource), dataSource.getContainer().getPreferenceStore());
     }
@@ -138,7 +133,7 @@ public class SQLSyntaxManager {
         this.quoteStrings = sqlDialect.getIdentifierQuoteStrings();
         this.structSeparator = sqlDialect.getStructSeparator();
         this.catalogSeparator = sqlDialect.getCatalogSeparator();
-        this.escapeChar = dialect.getStringEscapeCharacter();;
+        this.escapeChar = '\\';
         if (!preferenceStore.getBoolean(ModelPreferences.SCRIPT_IGNORE_NATIVE_DELIMITER)) {
             this.statementDelimiters = new String[] { sqlDialect.getScriptDelimiter().toLowerCase() };
         }
@@ -146,16 +141,12 @@ public class SQLSyntaxManager {
         String extraDelimiters = preferenceStore.getString(ModelPreferences.SCRIPT_STATEMENT_DELIMITER);
         StringTokenizer st = new StringTokenizer(extraDelimiters, " \t,");
         while (st.hasMoreTokens()) {
-            String delim = st.nextToken();
-            if (!ArrayUtils.contains(this.statementDelimiters, delim)) {
-                this.statementDelimiters = ArrayUtils.add(String.class, this.statementDelimiters, delim);
-            }
+            this.statementDelimiters = ArrayUtils.add(String.class, this.statementDelimiters, st.nextToken());
         }
         blankLineDelimiter = preferenceStore.getBoolean(ModelPreferences.SCRIPT_STATEMENT_DELIMITER_BLANK);
 
         this.parametersEnabled = preferenceStore.getBoolean(ModelPreferences.SQL_PARAMETERS_ENABLED);
         this.anonymousParametersEnabled = preferenceStore.getBoolean(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_ENABLED);
-        this.variablesEnabled = preferenceStore.getBoolean(ModelPreferences.SQL_VARIABLES_ENABLED);
         String markString = preferenceStore.getString(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_MARK);
         if (CommonUtils.isEmpty(markString)) {
             this.anonymousParameterMark = SQLConstants.DEFAULT_PARAMETER_MARK;

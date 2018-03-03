@@ -17,7 +17,6 @@
 
 package org.jkiss.dbeaver.ui.controls.resultset.view;
 
-import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -74,15 +73,6 @@ public class StatisticsPresentation extends AbstractPresentation {
 
         UIUtils.createTableColumn(table, SWT.LEFT, "Name");
         UIUtils.createTableColumn(table, SWT.LEFT, "Value");
-
-        {
-            MenuManager menuMgr = new MenuManager();
-            menuMgr.addMenuListener(manager -> {
-                UIUtils.fillDefaultTableContextMenu(manager, table);
-            });
-            menuMgr.setRemoveAllWhenShown(true);
-            table.setMenu(menuMgr.createContextMenu(table));
-        }
     }
 
     @Override

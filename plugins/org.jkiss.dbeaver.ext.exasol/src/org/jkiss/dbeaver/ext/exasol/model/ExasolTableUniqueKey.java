@@ -37,7 +37,6 @@ import org.jkiss.dbeaver.model.struct.DBSEntityReferrer;
 
 import java.sql.ResultSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author Karl Griesser
@@ -147,7 +146,7 @@ public class ExasolTableUniqueKey extends JDBCTableConstraint<ExasolTable> imple
 	}
 
 	@Override
-	public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options)
+	public String getObjectDefinitionText(DBRProgressMonitor monitor)
 			throws DBException
 	{
 		return ExasolUtils.getPKDdl(this, monitor);

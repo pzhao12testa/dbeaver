@@ -21,19 +21,16 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.Platform;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.dnd.DropTargetAdapter;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.*;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.application.ActionBarAdvisor;
 import org.eclipse.ui.application.IActionBarConfigurer;
 import org.eclipse.ui.application.IWorkbenchWindowConfigurer;
 import org.eclipse.ui.application.WorkbenchWindowAdvisor;
-import org.eclipse.ui.internal.ide.IDEWorkbenchPlugin;
 import org.eclipse.ui.internal.progress.ProgressManagerUtil;
 import org.eclipse.ui.part.EditorInputTransfer;
 import org.eclipse.ui.part.MarkerTransfer;
@@ -42,13 +39,11 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.core.DBeaverUI;
 import org.jkiss.dbeaver.model.app.DBPProjectListener;
+import org.jkiss.dbeaver.registry.DataSourceRegistry;
 import org.jkiss.dbeaver.registry.ProjectRegistry;
-import org.jkiss.dbeaver.registry.WorkbenchHandlerRegistry;
-import org.jkiss.dbeaver.ui.IWorkbenchWindowInitializer;
-import org.jkiss.dbeaver.ui.perspective.AbstractPageListener;
-import org.jkiss.dbeaver.utils.GeneralUtils;
-
-import java.util.StringJoiner;
+import org.jkiss.dbeaver.ui.UIUtils;
+import org.jkiss.dbeaver.ui.dialogs.connection.CreateConnectionDialog;
+import org.jkiss.dbeaver.ui.dialogs.connection.NewConnectionWizard;
 
 public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor implements DBPProjectListener {
     private static final Log log = Log.getLog(ApplicationWorkbenchWindowAdvisor.class);
@@ -98,7 +93,6 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
     @Override
     public void preWindowOpen() {
         log.debug("Configure workbench window");
-        super.preWindowOpen();
         // Set timeout for short jobs (like SQL queries)
         // Jobs longer than this will show progress dialog
         ProgressManagerUtil.SHORT_OPERATION_TIME = 100;
@@ -126,88 +120,13 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
 
         // Show heap usage
         //PlatformUI.getPreferenceStore().setValue(IWorkbenchPreferenceConstants.SHOW_MEMORY_MONITOR, true);
-        hookTitleUpdateListeners(configurer);
-    }
-
-    /**
-     * Hooks the listeners needed on the window
-     *
-     * @param configurer
-     */
-    private void hookTitleUpdateListeners(IWorkbenchWindowConfigurer configurer) {
-        // hook up the listeners to update the window title
-        configurer.getWindow().addPageListener(new AbstractPageListener() {
-            @Override
-            public void pageActivated(IWorkbenchPage page) {
-                recomputeTitle();
-            }
-            @Override
-            public void pageClosed(IWorkbenchPage page) {
-                recomputeTitle();
-            }
-        });
-        configurer.getWindow().addPerspectiveListener(new PerspectiveAdapter() {
-            @Override
-            public void perspectiveActivated(IWorkbenchPage page, IPerspectiveDescriptor perspective) {
-                recomputeTitle();
-            }
-            @Override
-            public void perspectiveSavedAs(IWorkbenchPage page, IPerspectiveDescriptor oldPerspective, IPerspectiveDescriptor newPerspective) {
-                recomputeTitle();
-            }
-            @Override
-            public void perspectiveDeactivated(IWorkbenchPage page, IPerspectiveDescriptor perspective) {
-                recomputeTitle();
-            }
-        });
-        configurer.getWindow().getPartService().addPartListener(
-            new IPartListener2() {
-                @Override
-                public void partActivated(IWorkbenchPartReference ref) {
-                    if (ref instanceof IEditorReference) {
-                        recomputeTitle();
-                    }
-                }
-                @Override
-                public void partBroughtToTop(IWorkbenchPartReference ref) {
-                    if (ref instanceof IEditorReference) {
-                        recomputeTitle();
-                    }
-                }
-                @Override
-                public void partClosed(IWorkbenchPartReference ref) {
-                    recomputeTitle();
-                }
-
-                @Override
-                public void partDeactivated(IWorkbenchPartReference partRef) {
-                }
-
-                @Override
-                public void partOpened(IWorkbenchPartReference partRef) {
-                }
-
-                @Override
-                public void partHidden(IWorkbenchPartReference ref) {
-                    recomputeTitle();
-                }
-                @Override
-                public void partVisible(IWorkbenchPartReference ref) {
-                    recomputeTitle();
-                }
-
-                @Override
-                public void partInputChanged(IWorkbenchPartReference partRef) {
-
-                }
-            });
     }
 
     @Override
     public void postWindowCreate() {
         log.debug("Initialize workbench window");
-        super.postWindowCreate();
-        recomputeTitle();
+        final IWorkbenchWindow window = getWindowConfigurer().getWindow();
+        UIUtils.updateMainWindowTitle(window);
 /*
         try {
             ApplicationCSSManager.updateApplicationCSS(window.getShell().getDisplay());
@@ -217,10 +136,9 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
 */
 
         try {
-            DBeaverCommandLine.executeCommandLineCommands(
-                DBeaverCommandLine.getCommandLine(),
-                DBeaverApplication.getInstance().getInstanceServer(),
-                true);
+            DBeaverApplication.executeCommandLineCommands(
+                DBeaverApplication.getCommandLine(),
+                DBeaverApplication.getInstance().getInstanceServer());
         } catch (Exception e) {
             log.error("Error processing command line", e);
         }
@@ -231,76 +149,29 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor im
         log.debug("Finish initialization");
         super.postWindowOpen();
 
-        if (isRunWorkbenchInitializers()) {
+        if (isShowNewConnection()) {
             // Open New Connection wizard
             DBeaverUI.asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    for (IWorkbenchWindowInitializer wwInit : WorkbenchHandlerRegistry.getInstance().getWorkbenchWindowInitializers()) {
-                        wwInit.initializeWorkbenchWindow(getWindowConfigurer().getWindow());
-                    }
+                    IWorkbenchWindow window = getWindowConfigurer().getWindow();
+                    CreateConnectionDialog dialog = new CreateConnectionDialog(window, new NewConnectionWizard());
+                    dialog.open();
                 }
             });
         }
     }
 
-    protected boolean isRunWorkbenchInitializers() {
-        return true;
+    protected boolean isShowNewConnection() {
+        return DataSourceRegistry.getAllDataSources().isEmpty();
     }
 
     @Override
     public void handleActiveProjectChange(IProject oldValue, IProject newValue) {
-        recomputeTitle();
+        UIUtils.updateMainWindowTitle(getWindowConfigurer().getWindow());
     }
 
     public class EditorAreaDropAdapter extends DropTargetAdapter {
-    }
-
-    private void recomputeTitle() {
-        IWorkbenchWindowConfigurer configurer = getWindowConfigurer();
-        String oldTitle = configurer.getTitle();
-        String newTitle = computeTitle();
-        if (!newTitle.equals(oldTitle)) {
-            configurer.setTitle(newTitle);
-        }
-    }
-
-    private String computeTitle() {
-        // Use hardcoded pref constants to avoid E4.7 compile dependency
-        IPreferenceStore ps = IDEWorkbenchPlugin.getDefault().getPreferenceStore();
-        StringJoiner sj = new StringJoiner(" - "); //$NON-NLS-1$
-
-        if (ps.getBoolean("SHOW_LOCATION_NAME")) {
-            String workspaceName = ps.getString("WORKSPACE_NAME");
-            if (workspaceName != null && workspaceName.length() > 0) {
-                sj.add(workspaceName);
-            }
-        }
-        if (ps.getBoolean("SHOW_LOCATION")) {
-            String workspaceLocation = Platform.getLocation().toOSString();
-            sj.add(workspaceLocation);
-        }
-
-        if (ps.getBoolean("SHOW_PERSPECTIVE_IN_TITLE")) {
-            IProject activeProject = DBeaverCore.getInstance().getProjectRegistry().getActiveProject();
-            if (activeProject != null) {
-                sj.add(activeProject.getName()); //$NON-NLS-1$
-            }
-        }
-        if (ps.getBoolean("SHOW_PRODUCT_IN_TITLE")) {
-            sj.add(GeneralUtils.getProductTitle());
-        }
-        IWorkbenchWindow window = getWindowConfigurer().getWindow();
-        if (window != null) {
-            IWorkbenchPage activePage = window.getActivePage();
-            if (activePage != null) {
-                IEditorPart activeEditor = activePage.getActiveEditor();
-                if (activeEditor != null) {
-                    sj.add(activeEditor.getTitle());
-                }
-            }
-        }
-        return sj.toString();
     }
 
 }

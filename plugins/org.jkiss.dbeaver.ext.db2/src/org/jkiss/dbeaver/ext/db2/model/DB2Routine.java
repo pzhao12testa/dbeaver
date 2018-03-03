@@ -51,7 +51,6 @@ import org.jkiss.utils.CommonUtils;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * DB2 Routine Base Object (Procedures, Function)
@@ -220,7 +219,7 @@ public class DB2Routine extends DB2Object<DBSObject>
     // -----------------
 
     @Override
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException
     {
         if ((language != null) && (language.equals(DB2RoutineLanguage.SQL))) {
             if (DB2DDLFormat.getCurrentFormat(getDataSource()).needsFormatting()) {

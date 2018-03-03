@@ -21,7 +21,6 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.model.DBPObject;
 import org.jkiss.dbeaver.model.net.DBWHandlerConfiguration;
 import org.jkiss.dbeaver.model.runtime.DBRShellCommand;
-import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.*;
@@ -355,21 +354,5 @@ public class DBPConnectionConfiguration implements DBPObject
             CommonUtils.equalObjects(this.handlers, source.handlers) &&
             CommonUtils.equalObjects(this.bootstrap, source.bootstrap) &&
             this.keepAliveInterval == source.keepAliveInterval;
-    }
-
-    public void resolveSystemEnvironmentVariables() {
-        hostName     = hostName != null ? GeneralUtils.replaceSystemEnvironmentVariables(hostName) : null;
-        hostPort     = hostPort != null ? GeneralUtils.replaceSystemEnvironmentVariables(hostPort) : null;
-        serverName   = serverName != null ? GeneralUtils.replaceSystemEnvironmentVariables(serverName) : null;
-        databaseName = databaseName != null ? GeneralUtils.replaceSystemEnvironmentVariables(databaseName) : null;
-        userName     = userName != null ? GeneralUtils.replaceSystemEnvironmentVariables(userName) : null;
-        userPassword = userPassword != null ? GeneralUtils.replaceSystemEnvironmentVariables(userPassword) : null;
-        url          = url != null ? GeneralUtils.replaceSystemEnvironmentVariables(url) : null;
-        for (String prop : this.properties.keySet()) {
-            String value = this.properties.get(prop);
-            if (!CommonUtils.isEmpty(value)) {
-                this.properties.put(prop, GeneralUtils.replaceSystemEnvironmentVariables(value));
-            }
-        }
     }
 }

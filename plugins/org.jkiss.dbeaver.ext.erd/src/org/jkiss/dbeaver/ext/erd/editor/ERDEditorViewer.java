@@ -26,7 +26,6 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.ext.erd.part.EntityPart;
 import org.jkiss.dbeaver.model.struct.DBSEntity;
-import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -74,7 +73,7 @@ public class ERDEditorViewer extends Viewer
 
     @Override
     public void refresh() {
-        editorPart.refreshDiagram(true, true);
+        editorPart.refreshDiagram(true);
     }
 
     @Override
@@ -150,7 +149,7 @@ public class ERDEditorViewer extends Viewer
         private Object convertObject(Object object) {
             if (object instanceof EntityPart) {
                 final DBSEntity entity = ((EntityPart) object).getTable().getObject();
-                return entity == null ? null : NavigatorUtils.getNodeByObject(entity);
+                return entity == null ? null : DBeaverCore.getInstance().getNavigatorModel().getNodeByObject(entity);
             }
             return object;
         }

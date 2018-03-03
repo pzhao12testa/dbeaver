@@ -22,7 +22,6 @@ import org.jkiss.dbeaver.model.impl.preferences.SimplePreferenceStore;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceListener;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.preferences.DBPPropertyDescriptor;
-import org.jkiss.dbeaver.model.struct.DBSTypedObject;
 import org.jkiss.dbeaver.utils.PrefUtils;
 import org.jkiss.utils.CommonUtils;
 
@@ -185,7 +184,7 @@ public class DataFormatterProfile implements DBDDataFormatterProfile, DBPPrefere
     }
 
     @Override
-    public DBDDataFormatter createFormatter(String typeId, DBSTypedObject type)
+    public DBDDataFormatter createFormatter(String typeId)
         throws IllegalAccessException, InstantiationException, IllegalArgumentException
     {
         DataFormatterDescriptor descriptor = DataFormatterRegistry.getInstance().getDataFormatter(typeId);
@@ -203,7 +202,7 @@ public class DataFormatterProfile implements DBDDataFormatterProfile, DBPPrefere
         if (props != null && !props.isEmpty()) {
             formatterProps.putAll(props);
         }
-        formatter.init(type, locale, formatterProps);
+        formatter.init(locale, formatterProps);
         return formatter;
     }
 

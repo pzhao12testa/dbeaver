@@ -28,7 +28,6 @@ import org.jkiss.dbeaver.model.exec.jdbc.JDBCSession;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
 import java.sql.SQLException;
-import java.util.Map;
 
 /**
  * NetezzaMetaModel
@@ -39,7 +38,7 @@ public class NetezzaMetaModel extends GenericMetaModel
         super();
     }
 
-    public String getViewDDL(DBRProgressMonitor monitor, GenericTable sourceObject, Map<String, Object> options) throws DBException {
+    public String getViewDDL(DBRProgressMonitor monitor, GenericTable sourceObject) throws DBException {
         GenericDataSource dataSource = sourceObject.getDataSource();
         try (JDBCSession session = DBUtils.openMetaSession(monitor, dataSource, "Read Netezza view source")) {
             try (JDBCPreparedStatement dbStat = session.prepareStatement(

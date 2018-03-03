@@ -215,9 +215,9 @@ public class PackageNavigateHandler extends AbstractHandler //implements IElemen
                     {
                         dbStat.executeStatement();
                     }
-                    action.afterExecute(session, null);
+                    action.handleExecute(session, null);
                 } catch (DBCException e) {
-                    action.afterExecute(session, e);
+                    action.handleExecute(session, e);
                     throw e;
                 }
                 if (action instanceof OracleObjectPersistAction) {

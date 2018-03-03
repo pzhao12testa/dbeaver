@@ -16,9 +16,7 @@
  */
 package org.jkiss.dbeaver.ui.search.metadata;
 
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.*;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
@@ -37,7 +35,6 @@ import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.DBRProgressListener;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
-import org.jkiss.dbeaver.model.runtime.DefaultProgressMonitor;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
@@ -280,23 +277,14 @@ public class SearchMetadataPage extends AbstractSearchPage {
             UIUtils.createTableColumn(typesTable, SWT.LEFT, CoreMessages.dialog_search_objects_column_description);
         }
 
-        DBeaverUI.asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                loadState();
-            }
-        });
-    }
-
-    private void loadState() {
         try {
-            container.getRunnableContext().run(true, true, new IRunnableWithProgress() {
+            DBeaverUI.runInProgressDialog(new DBRRunnableWithProgress() {
                 @Override
-                public void run(IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+                public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
                     monitor.beginTask("Load database nodes", 1);
                     try {
                         monitor.subTask("Load tree state");
-                        sourceNodes = loadTreeState(new DefaultProgressMonitor(monitor), DBeaverCore.getGlobalPreferenceStore(), PROP_SOURCES);
+                        sourceNodes = loadTreeState(monitor, DBeaverCore.getGlobalPreferenceStore(), PROP_SOURCES);
                     } finally {
                         monitor.done();
                     }
@@ -304,8 +292,6 @@ public class SearchMetadataPage extends AbstractSearchPage {
             });
         } catch (InvocationTargetException e) {
             DBUserInterface.getInstance().showError("Data sources load", "Error loading settings", e.getTargetException());
-        } catch (InterruptedException e) {
-            // ignore
         }
 
         if (!sourceNodes.isEmpty()) {

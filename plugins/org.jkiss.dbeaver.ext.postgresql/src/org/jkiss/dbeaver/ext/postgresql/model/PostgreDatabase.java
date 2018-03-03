@@ -37,22 +37,15 @@ import org.jkiss.dbeaver.model.impl.jdbc.JDBCExecutionContext;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectCache;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectLookupCache;
-import org.jkiss.dbeaver.model.impl.jdbc.exec.JDBCPreparedStatementCachedImpl;
 import org.jkiss.dbeaver.model.meta.Association;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.model.struct.rdb.DBSCatalog;
-import org.jkiss.utils.CommonUtils;
 import org.jkiss.utils.LongKeyMap;
 
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 /**
  * PostgreDatabase
@@ -65,7 +58,6 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     private long oid;
     private String name;
     private long ownerId;
-    private String templateName;
     private long encodingId;
     private String collate;
     private String ctype;
@@ -83,9 +75,6 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     public final TablespaceCache tablespaceCache = new TablespaceCache();
     public final SchemaCache schemaCache = new SchemaCache();
     public final LongKeyMap<PostgreDataType> dataTypeCache = new LongKeyMap<>();
-    
-    /* For HOT statement we will parse it once and save cursor in map*/
-    public final Map<String,JDBCPreparedStatementCachedImpl> statmentCache  = new ConcurrentHashMap<>();  
 
     public PostgreDatabase(PostgreDataSource dataSource, JDBCResultSet dbResult)
         throws SQLException
@@ -107,16 +96,6 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
         this.allowConnect = JDBCUtils.safeGetBoolean(dbResult, "datallowconn");
         this.connectionLimit = JDBCUtils.safeGetInt(dbResult, "datconnlimit");
         this.tablespaceId = JDBCUtils.safeGetLong(dbResult, "dattablespace");
-    }
-
-    public PostgreDatabase(PostgreDataSource dataSource, String name, PostgreRole owner, String templateName, PostgreTablespace tablespace, PostgreCharset encoding)
-    {
-        this.dataSource = dataSource;
-        this.name = name;
-        this.ownerId = owner.getObjectId();
-        this.templateName = templateName;
-        this.tablespaceId = tablespace.getObjectId();
-        this.encodingId = encoding.getObjectId();
     }
 
     @NotNull
@@ -164,10 +143,6 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
 
     ///////////////////////////////////////////////////
     // Properties
-
-    public String getTemplateName() {
-        return templateName;
-    }
 
     @Property(viewable = false, order = 3)
     public PostgreRole getDBA(DBRProgressMonitor monitor) throws DBException {
@@ -231,19 +206,7 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
 
     @Override
     public void shutdown(DBRProgressMonitor monitor) {
-		 for(Entry<String, JDBCPreparedStatementCachedImpl> s :statmentCache.entrySet()) {
-			 try {
-				s.getValue().cancel();
-			} catch (Exception e) {
-				log.error(String.format("Unable to cancel statment %s error %s",s.getKey(),e.getMessage()),e);
-			}
-			 try {
-				s.getValue().drop();
-			} catch (Exception e) {
-				log.error(String.format("Unable to close statment %s error %s",s.getKey(),e.getMessage()),e);
-			}			 
-		 }
-		 statmentCache.clear();
+
     }
 
     ///////////////////////////////////////////////
@@ -287,20 +250,11 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     ///////////////////////////////////////////////
     // Object container
 
-    private void checkDefaultDatabase(DBRProgressMonitor monitor) throws DBException {
-        if (this != dataSource.getDefaultInstance()) {
-            final boolean switchOnExpand = CommonUtils.toBoolean(getDataSource().getContainer().getActualConnectionConfiguration().getProviderProperty(PostgreConstants.PROP_SWITCH_DB_ON_EXPAND));
-            if (switchOnExpand) {
-                getDataSource().setDefaultObject(monitor, this);
-            } else {
-                throw new DBException("Can't access non-default database");
-            }
-        }
-    }
-
     @Association
     public Collection<PostgreSchema> getSchemas(DBRProgressMonitor monitor) throws DBException {
-        checkDefaultDatabase(monitor);
+        if (this != dataSource.getDefaultInstance()) {
+            throw new DBException("Can't access non-default database");
+        }
         // Get all schemas
         return schemaCache.getAllObjects(monitor, this);
     }
@@ -324,12 +278,16 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     }
 
     public PostgreSchema getSchema(DBRProgressMonitor monitor, String name) throws DBException {
-        checkDefaultDatabase(monitor);
+        if (this != dataSource.getDefaultInstance()) {
+            throw new DBException("Can't access non-default database");
+        }
         return schemaCache.getObject(monitor, this, name);
     }
 
     public PostgreSchema getSchema(DBRProgressMonitor monitor, long oid) throws DBException {
-        checkDefaultDatabase(monitor);
+        if (this != dataSource.getDefaultInstance()) {
+            throw new DBException("Can't access non-default database");
+        }
         for (PostgreSchema schema : schemaCache.getAllObjects(monitor, this)) {
             if (schema.getObjectId() == oid) {
                 return schema;
@@ -343,7 +301,7 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     {
         PostgreSchema schema = getSchema(monitor, schemaId);
         if (schema == null) {
-        	log.error("Catalog " + schemaId + " not found");
+            log.error("Catalog " + schemaId + " not found");
             return null;
         }
         return schema.getTable(monitor, tableId);
@@ -386,13 +344,15 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
 
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) throws DBException {
-        // Refresh all properties
-        PostgreDatabase refDatabase = dataSource.getDatabaseCache().refreshObject(monitor, dataSource, this);
-        if (refDatabase != null && refDatabase == dataSource.getDefaultInstance()) {
-            // Cache types
-            refDatabase.cacheDataTypes(monitor);
-        }
-        return refDatabase;
+        roleCache.clearCache();
+        accessMethodCache.clearCache();
+        languageCache.clearCache();
+        encodingCache.clearCache();
+        tablespaceCache.clearCache();
+        schemaCache.clearCache();
+
+        cacheDataTypes(monitor);
+        return this;
     }
 
     public Collection<PostgreRole> getUsers(DBRProgressMonitor monitor) throws DBException {
@@ -409,7 +369,7 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     public PostgreSchema getDefaultObject() {
         return schemaCache.getCachedObject(dataSource.getActiveSchemaName());
     }
-    
+
     @Override
     public void setDefaultObject(@NotNull DBRProgressMonitor monitor, @NotNull DBSObject object) throws DBException {
         if (object instanceof PostgreSchema) {
@@ -478,6 +438,10 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
             // In some cases ResultSetMetadata returns it as []
             typeName = "_" + typeName.substring(0, typeName.length() - 2);
         }
+        String alias = PostgreConstants.DATA_TYPE_ALIASES.get(typeName);
+        if (alias != null) {
+            typeName = alias;
+        }
         {
             // First check system catalog
             final PostgreSchema schema = getCatalogSchema();
@@ -518,9 +482,6 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     public String toString() {
         return name;
     }
-
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Caches
 
     class RoleCache extends JDBCObjectCache<PostgreDatabase, PostgreRole> {
 
@@ -677,7 +638,7 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
             return new PostgreTablespace(owner, dbResult);
         }
     }
-    
+
     static class SchemaCache extends JDBCObjectLookupCache<PostgreDatabase, PostgreSchema>
     {
         @NotNull

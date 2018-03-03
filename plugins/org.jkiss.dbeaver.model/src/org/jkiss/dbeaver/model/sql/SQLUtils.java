@@ -20,7 +20,6 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.Platform;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
-import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.data.*;
@@ -30,11 +29,12 @@ import org.jkiss.dbeaver.model.exec.DBCSession;
 import org.jkiss.dbeaver.model.impl.sql.BasicSQLDialect;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
-import org.jkiss.dbeaver.model.sql.format.SQLFormatter;
 import org.jkiss.dbeaver.model.sql.format.SQLFormatterConfiguration;
-import org.jkiss.dbeaver.model.struct.*;
-import org.jkiss.dbeaver.model.struct.rdb.DBSTableForeignKey;
-import org.jkiss.dbeaver.model.struct.rdb.DBSTableForeignKeyColumn;
+import org.jkiss.dbeaver.model.sql.format.tokenized.SQLTokenizedFormatter;
+import org.jkiss.dbeaver.model.struct.DBSAttributeBase;
+import org.jkiss.dbeaver.model.struct.DBSDataType;
+import org.jkiss.dbeaver.model.struct.DBSObject;
+import org.jkiss.dbeaver.model.struct.DBSTypedObject;
 import org.jkiss.dbeaver.utils.ContentUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.ArrayUtils;
@@ -45,10 +45,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -179,11 +176,6 @@ public final class SQLUtils {
         return result.toString();
     }
 
-    public static String makeSQLLike(String like)
-    {
-        return like.replace("*", "%");
-    }
-
     public static boolean matchesLike(String string, String like)
     {
         Pattern pattern = Pattern.compile(makeLikePattern(like), Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
@@ -197,11 +189,6 @@ public final class SQLUtils {
         } else {
             buffer.append('\'').append(value).append('\'');
         }
-    }
-
-    public static boolean isStringQuoted(String string)
-    {
-        return string.length() > 1 && string.startsWith("'") && string.endsWith("'");
     }
 
     public static String quoteString(DBSObject object, String string)
@@ -287,16 +274,11 @@ public final class SQLUtils {
         SQLSyntaxManager syntaxManager = new SQLSyntaxManager();
         syntaxManager.init(dataSource.getSQLDialect(), dataSource.getContainer().getPreferenceStore());
         SQLFormatterConfiguration configuration = new SQLFormatterConfiguration(syntaxManager);
-        SQLFormatter formatter = dataSource.getDataSource().getContainer().getPlatform().getSQLFormatterRegistry().createFormatter(configuration);
-        if (formatter == null) {
-            return query;
-        }
-        return formatter.format(query, configuration);
+        return new SQLTokenizedFormatter().format(query, configuration);
     }
 
     public static void appendLikeCondition(StringBuilder sql, String value, boolean not)
     {
-        value = makeSQLLike(value);
         if (value.contains("%") || value.contains("_")) {
             if (not) sql.append(" NOT");
             sql.append(" LIKE ?");
@@ -315,72 +297,31 @@ public final class SQLUtils {
         return false;
     }
 
-    public static String trimQueryStatement(SQLSyntaxManager syntaxManager, String sql, boolean trimDelimiter)
+    public static String trimQueryStatement(SQLSyntaxManager syntaxManager, String sql)
     {
-        if (sql.isEmpty() || !trimDelimiter) {
+        sql = sql.trim();
+        if (syntaxManager.getDialect().isDelimiterAfterQuery()) {
             // Do not trim delimiter
             return sql;
         }
-
-        // Here we cur trailing query delimiter. most of DBs don't expect it in the end of query
-        // However Oracle REQUIRES that block queries (e.g. DDL like CREATE PROCEDURE) must have trailing delimiter
-        // So we check whether this query is a block query (by checking for all SQL dialect block delimiters)
-        String trailingSpaces = "";
-        {
-            int trailingSpacesCount = 0;
-            for (int i = sql.length() - 1; i >= 0; i--) {
-                if (!Character.isWhitespace(sql.charAt(i))) {
-                    break;
-                }
-                trailingSpacesCount++;
-            }
-            if (trailingSpacesCount > 0) {
-                trailingSpaces = sql.substring(sql.length() - trailingSpacesCount);
-                sql = sql.substring(0, sql.length() - trailingSpacesCount);
-            }
-        }
         for (String statementDelimiter : syntaxManager.getStatementDelimiters()) {
-            if (!sql.endsWith(statementDelimiter) && sql.length() > statementDelimiter.length()) {
-                continue;
-            }
-            if (Character.isAlphabetic(statementDelimiter.charAt(0))) {
-                // Delimiter is alphabetic (e.g. "GO") so it must be prefixed with whitespace
-                char lastChar = sql.charAt(sql.length() - statementDelimiter.length() - 1);
-                if (Character.isUnicodeIdentifierPart(lastChar)) {
-                    break;
-                }
-            }
-            // Remove trailing delimiter only if it is not block end
-            boolean isBlockQuery = false;
-            String trimmed = sql.substring(0, sql.length() - statementDelimiter.length());
-            {
-                String test = trimmed.toUpperCase().trim();
-                String[][] blockBoundStrings = syntaxManager.getDialect().getBlockBoundStrings();
-                if (blockBoundStrings != null) {
-                    for (String[] blocks : blockBoundStrings) {
-                        int endIndex = test.indexOf(blocks[1]);
-                        if (endIndex > 0) {
-                            // This is a block query if it ends with 'END' or with 'END id'
-                            if (test.endsWith(blocks[1])) {
-                                isBlockQuery = true;
-                                break;
-                            } else {
-                                String afterEnd = test.substring(endIndex + blocks[1].length()).trim();
-                                if (CommonUtils.isJavaIdentifier(afterEnd)) {
-                                    isBlockQuery = true;
-                                    break;
-                                }
-                            }
-                        }
+            if (sql.endsWith(statementDelimiter) && sql.length() > statementDelimiter.length()) {
+                if (Character.isAlphabetic(statementDelimiter.charAt(0))) {
+                    // Delimiter is alphabetic (e.g. "GO") so it must be prefixed with whitespace
+                    char lastChar = sql.charAt(sql.length() - statementDelimiter.length() - 1);
+                    if (Character.isUnicodeIdentifierPart(lastChar)) {
+                        return sql;
                     }
                 }
+                // Remove trailing delimiter only if it is not block end
+                String trimmed = sql.substring(0, sql.length() - statementDelimiter.length());
+                String test = trimmed.toUpperCase().trim();
+                if (!test.endsWith(SQLConstants.BLOCK_END)) {
+                    sql = trimmed;
+                }
             }
-            if (!isBlockQuery) {
-                sql = trimmed;
-            }
-            break;
         }
-        return sql + trailingSpaces;
+        return sql;
     }
 
     @NotNull
@@ -817,10 +758,10 @@ public final class SQLUtils {
     }
 
     public static String[] splitFullIdentifier(final String fullName, char nameSeparator, String[][] quoteStrings) {
-        return splitFullIdentifier(fullName, String.valueOf(nameSeparator), quoteStrings, false);
+        return splitFullIdentifier(fullName, String.valueOf(nameSeparator), quoteStrings);
     }
 
-    public static String[] splitFullIdentifier(final String fullName, String nameSeparator, String[][] quoteStrings, boolean keepQuotes) {
+    public static String[] splitFullIdentifier(final String fullName, String nameSeparator, String[][] quoteStrings) {
         String name = fullName.trim();
         if (ArrayUtils.isEmpty(quoteStrings)) {
             return name.split(Pattern.quote(nameSeparator));
@@ -832,17 +773,12 @@ public final class SQLUtils {
         while (!name.isEmpty()) {
             boolean hadQuotedPart = false;
             for (String[] quotePair : quoteStrings) {
-                String startQuote = quotePair[0];
-                String endQuote = quotePair[1];
-                if (!CommonUtils.isEmpty(startQuote) && !CommonUtils.isEmpty(endQuote) && name.startsWith(startQuote)) {
-                    int endPos = name.indexOf(endQuote, startQuote.length());
+                if (name.startsWith(quotePair[0])) {
+                    int endPos = name.indexOf(quotePair[1]);
                     if (endPos != -1) {
                         // Quoted part
-                        String partName = keepQuotes ?
-                            name.substring(0, endPos + endQuote.length()) :
-                            name.substring(startQuote.length(), endPos);
-                        nameList.add(partName);
-                        name = name.substring(endPos + endQuote.length()).trim();
+                        nameList.add(name.substring(quotePair[0].length(), endPos));
+                        name = name.substring(endPos + quotePair[1].length()).trim();
                         hadQuotedPart = true;
                         break;
                     }
@@ -864,84 +800,4 @@ public final class SQLUtils {
         }
         return nameList.toArray(new String[nameList.size()]);
     }
-
-    public static String generateTableJoin(DBRProgressMonitor monitor, DBSEntity leftTable, String leftAlias, DBSEntity rightTable, String rightAlias) throws DBException {
-        // Try to find FK in left table referencing to right table
-        String sql = generateTableJoinByAssociation(monitor, leftTable, leftAlias, rightTable, rightAlias);
-        if (sql != null) return sql;
-
-        // Now try right to left
-        sql = generateTableJoinByAssociation(monitor, rightTable, rightAlias, leftTable, leftAlias);
-        if (sql != null) return sql;
-
-        // Try to find columns in left table which match unique key in right table
-        sql = generateTableJoinByColumns(monitor, leftTable, leftAlias, rightTable, rightAlias);
-        if (sql != null) return sql;
-
-        // In reverse order
-        sql = generateTableJoinByColumns(monitor, rightTable, rightAlias, leftTable, leftAlias);
-        if (sql != null) return sql;
-
-        return null;
-    }
-
-    private static String generateTableJoinByColumns(DBRProgressMonitor monitor, DBSEntity leftTable, String leftAlias, DBSEntity rightTable, String rightAlias) throws DBException {
-        List<DBSEntityAttribute> leftIdentifier = new ArrayList<>(DBUtils.getBestTableIdentifier(monitor, leftTable));
-        if (!leftIdentifier.isEmpty()) {
-            List<DBSEntityAttribute> rightAttributes = new ArrayList<>();
-            for (DBSEntityAttribute attr : leftIdentifier) {
-                DBSEntityAttribute rightAttr = rightTable.getAttribute(monitor, attr.getName());
-                if (rightAttr == null) {
-                    break;
-                }
-                rightAttributes.add(rightAttr);
-            }
-            if (leftIdentifier.size() != rightAttributes.size()) {
-                return null;
-            }
-            StringBuilder joinSQL = new StringBuilder();
-            for (int i = 0; i < leftIdentifier.size(); i++) {
-                joinSQL
-                    .append(leftAlias).append(".").append(DBUtils.getQuotedIdentifier(leftIdentifier.get(i))).append(" = ")
-                    .append(rightAlias).append(".").append(DBUtils.getQuotedIdentifier(rightAttributes.get(i)));
-            }
-            return joinSQL.toString();
-        }
-        return null;
-    }
-
-    private static String generateTableJoinByAssociation(DBRProgressMonitor monitor, DBSEntity leftTable, String leftAlias, DBSEntity rightTable, String rightAlias) throws DBException {
-        Collection<? extends DBSEntityAssociation> associations = leftTable.getAssociations(monitor);
-        if (!CommonUtils.isEmpty(associations)) {
-            for (DBSEntityAssociation fk : associations) {
-                if (fk instanceof DBSTableForeignKey && fk.getAssociatedEntity() == rightTable) {
-                    return generateTablesJoin(monitor, (DBSTableForeignKey)fk, leftAlias, rightAlias);
-                }
-            }
-        }
-        return null;
-    }
-
-    private static String generateTablesJoin(DBRProgressMonitor monitor, DBSTableForeignKey fk, String leftAlias, String rightAlias) throws DBException {
-        boolean hasCriteria = false;
-        StringBuilder joinSQL = new StringBuilder();
-        for (DBSEntityAttributeRef ar : fk.getAttributeReferences(monitor)) {
-            if (ar instanceof DBSTableForeignKeyColumn) {
-                if (hasCriteria) {
-                    joinSQL.append(" AND ");
-                }
-                DBSTableForeignKeyColumn fkc = (DBSTableForeignKeyColumn)ar;
-                joinSQL
-                    .append(leftAlias).append(".").append(DBUtils.getQuotedIdentifier(fkc)).append(" = ")
-                    .append(rightAlias).append(".").append(DBUtils.getQuotedIdentifier(fkc.getReferencedColumn()));
-                hasCriteria = true;
-            }
-        }
-        return joinSQL.toString();
-    }
-
-    public static String getTableAlias(DBSEntity table) {
-        return CommonUtils.escapeIdentifier(table.getName());
-    }
-
 }

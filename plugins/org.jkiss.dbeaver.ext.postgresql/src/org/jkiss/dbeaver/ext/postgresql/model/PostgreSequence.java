@@ -37,7 +37,6 @@ import org.jkiss.dbeaver.model.struct.rdb.DBSSequence;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTableIndex;
 
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * PostgreSequence
@@ -82,10 +81,6 @@ public class PostgreSequence extends PostgreTableBase implements DBSSequence, DB
 
     public PostgreSequence(PostgreSchema schema, JDBCResultSet dbResult) {
         super(schema, dbResult);
-    }
-
-    public PostgreSequence(PostgreSchema catalog) {
-        super(catalog);
     }
 
     @PropertyGroup()
@@ -164,7 +159,7 @@ public class PostgreSequence extends PostgreTableBase implements DBSSequence, DB
     }
 
     @Override
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException {
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException {
         AdditionalInfo info = getAdditionalInfo(monitor);
         StringBuilder sql = new StringBuilder();
         sql.append("-- DROP SEQUENCE ").append(getFullyQualifiedName(DBPEvaluationContext.DDL)).append(";\n\n");

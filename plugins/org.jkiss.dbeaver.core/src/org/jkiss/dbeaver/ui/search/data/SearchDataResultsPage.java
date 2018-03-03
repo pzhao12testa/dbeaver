@@ -24,7 +24,6 @@ import org.jkiss.dbeaver.model.navigator.DBNDatabaseNode;
 import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.ui.controls.resultset.ResultSetViewer;
-import org.jkiss.dbeaver.ui.editors.data.AbstractDataEditor;
 import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.dbeaver.ui.search.AbstractSearchResultsPage;
 
@@ -71,7 +70,7 @@ public class SearchDataResultsPage extends AbstractSearchResultsPage<SearchDataO
                         return;
                     }
                     SearchDataObject object = (SearchDataObject) objectValue;
-                    AbstractDataEditor.openNewDataEditor((DBNDatabaseNode) node, object.getFilter());
+                    ResultSetViewer.openNewDataEditor((DBNDatabaseNode) node, object.getFilter());
                 }
             });
         }

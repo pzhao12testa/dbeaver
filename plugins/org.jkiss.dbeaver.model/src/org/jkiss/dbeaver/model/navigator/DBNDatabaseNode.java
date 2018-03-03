@@ -119,15 +119,6 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBSWrapper, DBP
     }
 
     @Override
-    public String getNodeBriefInfo() {
-        if (getObject() instanceof DBPToolTipObject) {
-            return ((DBPToolTipObject)getObject()).getObjectToolTip();
-        } else {
-            return super.getNodeBriefInfo();
-        }
-    }
-
-    @Override
     public String getNodeFullName()
     {
         if (getObject() instanceof DBPQualifiedObject) {
@@ -356,12 +347,16 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBSWrapper, DBP
             if (newObject != getObject()) {
                 reloadObject(monitor, newObject);
             }
+            if (reflect) model.fireNodeUpdate(source, this, DBNEvent.NodeChange.LOCK);
 
             this.reloadChildren(monitor, reflect);
 
             if (reflect) model.fireNodeUpdate(source, this, DBNEvent.NodeChange.REFRESH);
         } finally {
             this.locked = false;
+
+            // Unlock node
+            if (reflect) model.fireNodeUpdate(source, this, DBNEvent.NodeChange.UNLOCK);
         }
     }
 
@@ -750,7 +745,7 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBSWrapper, DBP
         }
     }
 
-    protected Class<?> getChildrenClass(DBXTreeItem childMeta)
+    private Class<?> getChildrenClass(DBXTreeItem childMeta)
     {
         Object valueObject = getValueObject();
         if (valueObject == null) {

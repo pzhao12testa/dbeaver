@@ -21,13 +21,11 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.*;
-import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.model.connection.DBPDriverDependencies;
 import org.jkiss.dbeaver.model.connection.DBPDriverLibrary;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
@@ -50,7 +48,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
     private DriverDependenciesTree depsTree;
 
     DriverDownloadAutoPage() {
-        super(CoreMessages.dialog_driver_download_auto_page_auto_download, CoreMessages.dialog_driver_download_auto_page_download_driver_files, null);
+        super("Automatic download", "Download driver files", null);
         setPageComplete(false);
     }
 
@@ -59,7 +57,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
         final DriverDownloadWizard wizard = getWizard();
         final DriverDescriptor driver = wizard.getDriver();
 
-        setMessage(NLS.bind(CoreMessages.dialog_driver_download_auto_page_download_specific_driver_files, driver.getFullName()));
+        setMessage("Download " + driver.getFullName() + " driver files");
         initializeDialogUnits(parent);
 
         Composite composite = UIUtils.createPlaceholder(parent, 1);
@@ -69,11 +67,11 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
             Composite infoGroup = UIUtils.createPlaceholder(composite, 2, 5);
             infoGroup.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
             Label infoText = new Label(infoGroup, SWT.NONE);
-            infoText.setText(NLS.bind(CoreMessages.dialog_driver_download_auto_page_driver_file_missing_text, driver.getFullName()));
+            infoText.setText(driver.getFullName() + " driver files are missing.\nDBeaver can download these files automatically.\n\n");
             infoText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-            final Button forceCheckbox = UIUtils.createCheckbox(infoGroup, CoreMessages.dialog_driver_download_auto_page_force_download, wizard.isForceDownload());
-            forceCheckbox.setToolTipText(CoreMessages.dialog_driver_download_auto_page_force_download_tooltip);
+            final Button forceCheckbox = UIUtils.createCheckbox(infoGroup, "Force download / overwrite", wizard.isForceDownload());
+            forceCheckbox.setToolTipText("Force files download. Will download files even if they are already on the disk");
             forceCheckbox.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END | GridData.VERTICAL_ALIGN_BEGINNING));
             forceCheckbox.addSelectionListener(new SelectionAdapter() {
                 @Override
@@ -84,7 +82,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
         }
 
         {
-            Group filesGroup = UIUtils.createControlGroup(composite, CoreMessages.dialog_driver_download_auto_page_required_files, 1, -1, -1);
+            Group filesGroup = UIUtils.createControlGroup(composite, "Files required by driver", 1, -1, -1);
             filesGroup.setLayoutData(new GridData(GridData.FILL_BOTH));
 
             depsTree = new DriverDependenciesTree(
@@ -105,12 +103,12 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
                 }
 
             };
-            new Label(filesGroup, SWT.NONE).setText(CoreMessages.dialog_driver_download_auto_page_change_driver_version_text);
+            new Label(filesGroup, SWT.NONE).setText("You can change driver version by clicking on version column.\nThen you can choose one of the available versions.");
         }
 
         if (!wizard.isForceDownload()) {
             Label infoText = new Label(composite, SWT.NONE);
-            infoText.setText(CoreMessages.dialog_driver_download_auto_page_obtain_driver_files_text);
+            infoText.setText("\nOr you can obtain driver files by yourself and add them in driver editor.");
             infoText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         }
 
@@ -123,7 +121,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
     @Override
     void resolveLibraries() {
         if (!depsTree.resolveLibraries()) {
-            setErrorMessage(CoreMessages.dialog_driver_download_auto_page_cannot_resolve_libraries_text);
+            setErrorMessage("Can't resolve libraries. Check your network settings");
         }
         depsTree.resizeTree();
     }
@@ -143,7 +141,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
                 }
             });
         } catch (InvocationTargetException e) {
-            DBUserInterface.getInstance().showError(CoreMessages.dialog_driver_download_auto_page_driver_download_error, CoreMessages.dialog_driver_download_auto_page_driver_download_error_msg, e.getTargetException());
+            DBUserInterface.getInstance().showError("Driver download", "Error downloading driver files", e.getTargetException());
         } catch (InterruptedException e) {
             // ignore
         }
@@ -164,9 +162,12 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
                     @Override
                     protected Boolean runTask() {
                         MessageBox messageBox = new MessageBox(getShell(), SWT.ICON_WARNING | SWT.YES | SWT.NO);
-                        messageBox.setText(CoreMessages.dialog_driver_download_auto_page_driver_security_warning);
-                        messageBox.setMessage(NLS.bind(CoreMessages.dialog_driver_download_auto_page_driver_security_warning_msg,
-                                lib.getDisplayName(), lib.getExternalURL(monitor)));
+                        messageBox.setText("Security warning");
+                        messageBox.setMessage(
+                                "Library '" + lib.getDisplayName() + "' wasn't found in secure repositories.\n" +
+                                "Only non-secure version is available: " + lib.getExternalURL(monitor) + ".\n\n" +
+                                "It is not recommended to use non-secure repositories because of possibility of malware infection.\n\n" +
+                                "Are you sure you want to proceed?");
                         int response = messageBox.open();
                         return (response == SWT.YES);
                     }
@@ -179,7 +180,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
             }
             int result = IDialogConstants.OK_ID;
             try {
-                lib.downloadLibraryFile(monitor, getWizard().isForceDownload(), NLS.bind(CoreMessages.dialog_driver_download_auto_page_download_rate, (i + 1), filesSize));
+                lib.downloadLibraryFile(monitor, getWizard().isForceDownload(), "Download " + (i + 1) + "/" + filesSize);
             } catch (final IOException e) {
                 if (lib.getType() == DBPDriverLibrary.FileType.license) {
                     result = IDialogConstants.OK_ID;
@@ -190,7 +191,7 @@ class DriverDownloadAutoPage extends DriverDownloadPage {
                             DownloadErrorDialog dialog = new DownloadErrorDialog(
                                     null,
                                     lib.getDisplayName(),
-                                    CoreMessages.dialog_driver_download_auto_page_download_failed_msg,
+                                    "Driver file download failed.\nDo you want to retry?",
                                     e);
                             return dialog.open();
                         }

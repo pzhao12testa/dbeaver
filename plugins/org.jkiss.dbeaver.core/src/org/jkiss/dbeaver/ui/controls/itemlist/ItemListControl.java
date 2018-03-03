@@ -29,7 +29,6 @@ import org.eclipse.ui.IWorkbenchSite;
 import org.eclipse.ui.part.MultiPageEditorPart;
 import org.eclipse.ui.part.MultiPageEditorSite;
 import org.jkiss.dbeaver.core.CoreCommands;
-import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.model.edit.DBEObjectReorderer;
 import org.jkiss.dbeaver.model.navigator.DBNDatabaseFolder;
 import org.jkiss.dbeaver.model.navigator.DBNDatabaseNode;
@@ -37,13 +36,13 @@ import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.model.navigator.meta.DBXTreeNode;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.load.DatabaseLoadService;
+import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.dbeaver.model.struct.DBSWrapper;
 import org.jkiss.dbeaver.registry.editor.EntityEditorsRegistry;
 import org.jkiss.dbeaver.runtime.properties.ObjectPropertyDescriptor;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
 import org.jkiss.dbeaver.ui.*;
 import org.jkiss.dbeaver.ui.actions.navigator.NavigatorHandlerFilterConfig;
-import org.jkiss.dbeaver.ui.editors.DatabaseEditorUtils;
 import org.jkiss.dbeaver.ui.editors.entity.EntityEditor;
 import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.utils.ArrayUtils;
@@ -52,6 +51,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * ItemListControl
@@ -87,7 +88,7 @@ public class ItemListControl extends NodeListControl
         final DBNNode rootNode = getRootNode();
         if (rootNode instanceof DBNDatabaseFolder && ((DBNDatabaseFolder) rootNode).getItemsMeta() != null) {
             contributionManager.add(new Action(
-                CoreMessages.obj_editor_properties_control_action_filter_setting,
+                "Filter settings",
                 DBeaverIcons.getImageDescriptor(UIIcon.FILTER))
             {
                 @Override
@@ -97,7 +98,18 @@ public class ItemListControl extends NodeListControl
                 }
             });
         }
-        addColumnConfigAction(contributionManager);
+        {
+            Action configColumnsAction = new Action(
+                    "Configure columns",
+                    DBeaverIcons.getImageDescriptor(UIIcon.CONFIGURATION)) {
+                @Override
+                public void run() {
+                    columnController.configureColumns();
+                }
+            };
+            configColumnsAction.setDescription("Configure columns visibility");
+            contributionManager.add(configColumnsAction);
+        }
         IWorkbenchSite workbenchSite = getWorkbenchSite();
         if (workbenchSite != null) {
             contributionManager.add(ActionUtils.makeCommandContribution(workbenchSite, IWorkbenchCommandConstants.FILE_REFRESH));
@@ -141,7 +153,20 @@ public class ItemListControl extends NodeListControl
             final MultiPageEditorPart editor = ((MultiPageEditorSite) workbenchSite).getMultiPageEditor();
             if (editor instanceof EntityEditor) {
                 contributionManager.add(new Separator());
-                DatabaseEditorUtils.contributeStandardEditorActions(workbenchSite, contributionManager);
+                contributionManager.add(ActionUtils.makeCommandContribution(
+                    workbenchSite,
+                    IWorkbenchCommandConstants.FILE_SAVE,
+                    null,
+                    UIIcon.SAVE,
+                    null,
+                    true));
+                contributionManager.add(ActionUtils.makeCommandContribution(
+                    workbenchSite,
+                    IWorkbenchCommandConstants.FILE_REVERT,
+                    null,
+                    UIIcon.RESET,
+                    null,
+                    true));
             }
         }
     }
@@ -289,6 +314,77 @@ public class ItemListControl extends NodeListControl
 
     }
 
+    private class SearcherFilter implements ISearchExecutor {
+
+        @Override
+        public boolean performSearch(String searchString, int options) {
+            try {
+                SearchFilter searchFilter = new SearchFilter(
+                    searchString,
+                    (options & SEARCH_CASE_SENSITIVE) != 0);
+                getItemsViewer().setFilters(new ViewerFilter[]{searchFilter});
+                return true;
+            } catch (PatternSyntaxException e) {
+                log.error(e.getMessage());
+                return false;
+            }
+        }
+
+        @Override
+        public void cancelSearch() {
+            getItemsViewer().setFilters(new ViewerFilter[]{});
+        }
+    }
+
+    private class SearchFilter extends ViewerFilter {
+        final Pattern pattern;
+
+        public SearchFilter(String searchString, boolean caseSensitiveSearch) throws PatternSyntaxException {
+            pattern = Pattern.compile(SQLUtils.makeLikePattern(searchString), caseSensitiveSearch ? 0 : Pattern.CASE_INSENSITIVE);
+        }
+
+        @Override
+        public boolean select(Viewer viewer, Object parentElement, Object element) {
+            if (element instanceof DBNNode) {
+                return pattern.matcher(((DBNNode) element).getName()).find();
+            }
+            return false;
+        }
+    }
+
+    private class SearcherHighligther extends ObjectSearcher<DBNNode> {
+        @Override
+        protected void setInfo(String message)
+        {
+            ItemListControl.this.setInfo(message);
+        }
+
+        @Override
+        protected Collection<DBNNode> getContent()
+        {
+            return (Collection<DBNNode>) getItemsViewer().getInput();
+        }
+
+        @Override
+        protected void selectObject(DBNNode object)
+        {
+            getItemsViewer().setSelection(object == null ? new StructuredSelection() : new StructuredSelection(object));
+        }
+
+        @Override
+        protected void updateObject(DBNNode object)
+        {
+            getItemsViewer().update(object, null);
+        }
+
+        @Override
+        protected void revealObject(DBNNode object)
+        {
+            getItemsViewer().reveal(object);
+        }
+
+    }
+
     private class ItemColorProvider extends ObjectColumnLabelProvider {
 
         ItemColorProvider(ObjectColumn objectColumn)
@@ -316,9 +412,9 @@ public class ItemListControl extends NodeListControl
             if (node.isDisposed()) {
                 return null;
             }
-//            if (searcher instanceof SearcherHighligther && ((SearcherHighligther) searcher).hasObject(node)) {
-//                return searchHighlightColor;
-//            }
+            if (searcher instanceof SearcherHighligther && ((SearcherHighligther) searcher).hasObject(node)) {
+                return searchHighlightColor;
+            }
             if (isNewObject(node)) {
                 final Object objectValue = getObjectValue(node);
                 final ObjectPropertyDescriptor prop = objectColumn.getProperty(getObjectValue(node));

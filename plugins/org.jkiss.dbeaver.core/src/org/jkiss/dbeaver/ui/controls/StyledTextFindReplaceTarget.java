@@ -60,10 +60,7 @@ public class StyledTextFindReplaceTarget implements IFindReplaceTarget, IFindRep
     @Override
     public Point getSelection()
     {
-        Point selection = text.getSelection();
-        // fix selection
-        selection.y = selection.y - selection.x;
-        return selection;
+        return text.getSelection();
     }
 
     @Override
@@ -154,7 +151,7 @@ public class StyledTextFindReplaceTarget implements IFindReplaceTarget, IFindRep
         }
         String searchIn = text.getText();
         Matcher matcher = findPattern.matcher(searchIn);
-        if (matcher.find(searchForward ? offset : 0)) {
+        if (matcher.find(offset)) {
             text.setSelection(matcher.start(), matcher.end());
             return matcher.start();
         }

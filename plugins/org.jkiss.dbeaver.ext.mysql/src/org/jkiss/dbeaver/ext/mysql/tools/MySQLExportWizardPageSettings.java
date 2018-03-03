@@ -26,8 +26,6 @@ import org.eclipse.swt.widgets.*;
 import org.jkiss.dbeaver.ext.mysql.MySQLMessages;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
-import org.jkiss.dbeaver.ui.dialogs.tools.AbstractImportExportWizard;
-import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.io.File;
@@ -38,6 +36,7 @@ class MySQLExportWizardPageSettings extends MySQLWizardPageSettings<MySQLExportW
 
     private Text outputFolderText;
     private Text outputFileText;
+    private Text extraCommandArgsText;
     private Combo methodCombo;
     private Button noCreateStatementsCheck;
     private Button addDropStatementsCheck;
@@ -47,9 +46,8 @@ class MySQLExportWizardPageSettings extends MySQLWizardPageSettings<MySQLExportW
     private Button commentsCheck;
     private Button removeDefiner;
     private Button binaryInHex;
-    private Button noData;
 
-    MySQLExportWizardPageSettings(MySQLExportWizard wizard)
+    protected MySQLExportWizardPageSettings(MySQLExportWizard wizard)
     {
         super(wizard, MySQLMessages.tools_db_export_wizard_page_settings_page_name);
         setTitle(MySQLMessages.tools_db_export_wizard_page_settings_page_name);
@@ -100,33 +98,40 @@ class MySQLExportWizardPageSettings extends MySQLWizardPageSettings<MySQLExportW
         removeDefiner.addSelectionListener(changeListener);
         binaryInHex = UIUtils.createCheckbox(settingsGroup, MySQLMessages.tools_db_export_wizard_page_settings_checkbox_binary_hex, wizard.binariesInHex);
         binaryInHex.addSelectionListener(changeListener);
-        noData = UIUtils.createCheckbox(settingsGroup, MySQLMessages.tools_db_export_wizard_page_settings_checkbox_no_data, wizard.noData);
-        noData.addSelectionListener(changeListener);
 
         Group outputGroup = UIUtils.createControlGroup(composite, MySQLMessages.tools_db_export_wizard_page_settings_group_output, 2, GridData.FILL_HORIZONTAL, 0);
-        outputFolderText = DialogUtils.createOutputFolderChooser(outputGroup, MySQLMessages.tools_db_export_wizard_page_settings_label_out_text, e -> updateState());
+        outputFolderText = DialogUtils.createOutputFolderChooser(outputGroup, MySQLMessages.tools_db_export_wizard_page_settings_label_out_text, new ModifyListener() {
+            @Override
+            public void modifyText(ModifyEvent e) {
+                updateState();
+            }
+        });
         outputFileText = UIUtils.createLabelText(outputGroup, "File name pattern", wizard.getOutputFilePattern());
-        UIUtils.setContentProposalToolTip(outputFileText, "Output file name pattern",
-            AbstractImportExportWizard.VARIABLE_HOST,
-            AbstractImportExportWizard.VARIABLE_DATABASE,
-            AbstractImportExportWizard.VARIABLE_TABLE,
-            AbstractImportExportWizard.VARIABLE_DATE,
-            AbstractImportExportWizard.VARIABLE_TIMESTAMP);
+        UIUtils.setContentProposalToolTip(outputFileText, "Output file name pattern", "host", "database", "table", "timestamp");
         UIUtils.installContentProposal(
             outputFileText,
             new TextContentAdapter(),
-            new SimpleContentProposalProvider(new String[] {
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_HOST),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_DATABASE),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_TABLE),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_DATE),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_TIMESTAMP),
-                }
-            ));
-        outputFileText.addModifyListener(e -> wizard.setOutputFilePattern(outputFileText.getText()));
+            new SimpleContentProposalProvider(new String[]{"${host}", "${database}", "${table}", "${timestamp}"}));
+        outputFileText.addModifyListener(new ModifyListener() {
+            @Override
+            public void modifyText(ModifyEvent e) {
+                wizard.setOutputFilePattern(outputFileText.getText());
+            }
+        });
 
-        createExtraArgsInput(outputGroup);
-
+        extraCommandArgsText = UIUtils.createLabelText(outputGroup, "Extra command args", wizard.getExtraCommandArgs());
+        extraCommandArgsText.setToolTipText("Set extra command args for mysqldump.");
+        UIUtils.installContentProposal(
+                extraCommandArgsText,
+                new TextContentAdapter(),
+                new SimpleContentProposalProvider(new String[]{}));
+        extraCommandArgsText.addModifyListener(new ModifyListener() {
+            @Override
+            public void modifyText(ModifyEvent e) {
+                wizard.setExtraCommandArgs(extraCommandArgsText.getText());
+            }
+        });
+        
         if (wizard.getOutputFolder() != null) {
             outputFolderText.setText(wizard.getOutputFolder().getAbsolutePath());
         }
@@ -155,7 +160,6 @@ class MySQLExportWizardPageSettings extends MySQLWizardPageSettings<MySQLExportW
         wizard.comments = commentsCheck.getSelection();
         wizard.removeDefiner = removeDefiner.getSelection();
         wizard.binariesInHex = binaryInHex.getSelection();
-        wizard.noData = noData.getSelection();
 
         getContainer().updateButtons();
     }

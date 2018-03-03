@@ -36,7 +36,6 @@ import org.jkiss.utils.CommonUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Exasol Table Column Manager
@@ -89,7 +88,7 @@ public class ExasolTableColumnManager extends SQLTableColumnManager<ExasolTableC
     // Alter
     // -----
     @Override
-    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command, Map<String, Object> options) {
+    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command) {
         ExasolTableColumn exasolColumn = command.getObject();
 
         if (!command.getProperties().isEmpty()) {
@@ -156,7 +155,7 @@ public class ExasolTableColumnManager extends SQLTableColumnManager<ExasolTableC
     }
 
     @Override
-    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command, Map<String, Object> options) {
+    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command) {
         final ExasolTableColumn column = command.getObject();
 
         actions.add(

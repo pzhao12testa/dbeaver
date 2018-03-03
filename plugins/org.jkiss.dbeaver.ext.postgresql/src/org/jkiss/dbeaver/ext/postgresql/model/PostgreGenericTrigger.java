@@ -23,8 +23,6 @@ import org.jkiss.dbeaver.ext.generic.model.GenericTrigger;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
-import java.util.Map;
-
 /**
  * PostgreGenericTrigger
  */
@@ -61,7 +59,7 @@ public class PostgreGenericTrigger extends GenericTrigger {
 
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException {
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException {
         return source;
     }
 

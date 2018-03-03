@@ -26,13 +26,7 @@ import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.UIIcon;
-import org.jkiss.dbeaver.ui.editors.IDatabaseEditorInput;
 import org.jkiss.dbeaver.ui.editors.sql.handlers.OpenHandler;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Display Source text (Read Only)
@@ -56,21 +50,7 @@ public class SQLSourceViewer<T extends DBPScriptObject & DBSObject> extends SQLE
     @Override
     protected String getSourceText(DBRProgressMonitor monitor) throws DBException
     {
-        return getSourceObject().getObjectDefinitionText(monitor, getSourceOptions());
-    }
-
-    protected Map<String, Object> getSourceOptions() {
-        IDatabaseEditorInput editorInput = getEditorInput();
-        Collection<String> attributeNames = editorInput.getAttributeNames();
-        if (attributeNames.isEmpty()) {
-            return DBPScriptObject.EMPTY_OPTIONS;
-        }
-        Map<String, Object> options = new HashMap<String, Object>();
-        for (String name : attributeNames) {
-            Object attribute = editorInput.getAttribute(name);
-            options.put(name, attribute);
-        }
-        return options;
+        return getSourceObject().getObjectDefinitionText(monitor);
     }
 
     @Override

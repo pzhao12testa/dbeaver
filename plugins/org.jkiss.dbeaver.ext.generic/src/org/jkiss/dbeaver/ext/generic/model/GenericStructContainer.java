@@ -72,8 +72,6 @@ public interface GenericStructContainer extends DBSObjectContainer, DBSProcedure
 
     Collection<? extends GenericTrigger> getTriggers(DBRProgressMonitor monitor) throws DBException;
 
-    Collection<? extends GenericTrigger> getTableTriggers(DBRProgressMonitor monitor) throws DBException;
-
     Collection<? extends DBSDataType> getDataTypes(DBRProgressMonitor monitor) throws DBException;
 
 

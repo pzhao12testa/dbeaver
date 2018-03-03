@@ -52,7 +52,6 @@ import org.jkiss.dbeaver.ui.data.IValueController;
 import org.jkiss.dbeaver.ui.data.IValueEditor;
 import org.jkiss.dbeaver.ui.editors.data.DatabaseDataEditor;
 import org.jkiss.dbeaver.ui.editors.object.struct.EditDictionaryPage;
-import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.lang.reflect.InvocationTargetException;
@@ -141,7 +140,7 @@ public class ReferenceValueEditor {
                                 @Override
                                 public void run(DBRProgressMonitor monitor)
                                     throws InvocationTargetException, InterruptedException {
-                                    DBNDatabaseNode tableNode = NavigatorUtils.getNodeByObject(
+                                    DBNDatabaseNode tableNode = DBeaverCore.getInstance().getNavigatorModel().getNodeByObject(
                                         monitor,
                                         refTable,
                                         true
@@ -328,20 +327,7 @@ public class ReferenceValueEditor {
             if (editorSelector.isDisposed()) {
                 return Status.OK_STATUS;
             }
-            final Map<Object, String> keyValues = new TreeMap<>((o1, o2) -> {
-                if (o1 instanceof Comparable && o2 instanceof Comparable) {
-                    return ((Comparable) o1).compareTo(o2);
-                }
-                if (o1 == o2) {
-                    return 0;
-                } else if (o1 == null) {
-                    return -1;
-                } else if (o2 == null) {
-                    return 1;
-                } else {
-                    return o1.toString().compareTo(o2.toString());
-                }
-            });
+            final Map<Object, String> keyValues = new TreeMap<>();
             try {
                 IAttributeController attributeController = (IAttributeController)valueController;
                 final DBSEntityAttribute tableColumn = attributeController.getBinding().getEntityAttribute();
@@ -358,7 +344,7 @@ public class ReferenceValueEditor {
                 } else {
                     return Status.OK_STATUS;
                 }
-                final DBSEntityAttribute refColumn = DBUtils.getReferenceAttribute(monitor, association, tableColumn, false);
+                final DBSEntityAttribute refColumn = DBUtils.getReferenceAttribute(monitor, association, tableColumn);
                 if (refColumn == null) {
                     return Status.OK_STATUS;
                 }

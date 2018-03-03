@@ -25,8 +25,7 @@ public class FunctionMin implements IAggregateFunction {
 
     @Override
     public boolean accumulate(Object value) {
-        value = FunctionNumeric.getComparable(value);
-        if (value != null) {
+        if (value instanceof Comparable) {
             if (result == null || AggregateUtils.compareValues((Comparable) value, result) < 0) {
                 result = (Comparable) value;
             }

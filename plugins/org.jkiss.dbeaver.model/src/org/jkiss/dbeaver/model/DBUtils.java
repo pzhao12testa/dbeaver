@@ -29,18 +29,13 @@ import org.jkiss.dbeaver.model.exec.*;
 import org.jkiss.dbeaver.model.impl.data.DefaultValueHandler;
 import org.jkiss.dbeaver.model.impl.sql.BasicSQLDialect;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
-import org.jkiss.dbeaver.model.runtime.DBRRunnableParametrized;
-import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
 import org.jkiss.dbeaver.model.sql.*;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.model.struct.rdb.*;
-import org.jkiss.dbeaver.runtime.jobs.InvalidateJob;
 import org.jkiss.dbeaver.utils.GeneralUtils;
-import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
@@ -101,9 +96,7 @@ public final class DBUtils {
     @NotNull
     public static String getUnQuotedIdentifier(@NotNull String str, @NotNull String quote1, @NotNull String quote2)
     {
-        if (quote1 != null && quote2 != null && str.length() >= quote1.length() + quote2.length() &&
-            str.startsWith(quote1) && str.endsWith(quote2))
-        {
+        if (quote1 != null && quote2 != null && str.startsWith(quote1) && str.endsWith(quote2)) {
             return str.substring(quote1.length(), str.length() - quote2.length());
         }
         return str;
@@ -276,6 +269,7 @@ public final class DBUtils {
      * @param schemaName schema name (optional)
      * @param objectName table name (optional)
      * @return found object or null
+     * @throws DBException
      */
     @Nullable
     public static DBSObject getObjectByPath(
@@ -524,30 +518,30 @@ public final class DBUtils {
     @NotNull
     public static DBDValueHandler findValueHandler(@NotNull DBPDataSource dataSource, @Nullable DBDPreferences preferences, @NotNull DBSTypedObject column)
     {
-        DBDValueHandler valueHandler = null;
+        DBDValueHandler typeHandler = null;
         // Get handler provider from datasource
-        DBDValueHandlerProvider handlerProvider = getAdapter(DBDValueHandlerProvider.class, dataSource);
-        if (handlerProvider != null) {
-            valueHandler = handlerProvider.getValueHandler(dataSource, preferences, column);
-            if (valueHandler != null) {
-                return valueHandler;
+        DBDValueHandlerProvider typeProvider = getAdapter(DBDValueHandlerProvider.class, dataSource);
+        if (typeProvider != null) {
+            typeHandler = typeProvider.getValueHandler(dataSource, preferences, column);
+            if (typeHandler != null) {
+                return typeHandler;
             }
         }
         // Get handler provider from registry
-        handlerProvider = dataSource.getContainer().getPlatform().getValueHandlerRegistry().getValueHandlerProvider(
+        typeProvider = dataSource.getContainer().getPlatform().getValueHandlerRegistry().getDataTypeProvider(
             dataSource, column);
-        if (handlerProvider != null) {
-            valueHandler = handlerProvider.getValueHandler(dataSource, preferences, column);
+        if (typeProvider != null) {
+            typeHandler = typeProvider.getValueHandler(dataSource, preferences, column);
         }
         // Use default handler
-        if (valueHandler == null) {
+        if (typeHandler == null) {
             if (preferences == null) {
-                valueHandler = DefaultValueHandler.INSTANCE;
+                typeHandler = DefaultValueHandler.INSTANCE;
             } else {
-                valueHandler = preferences.getDefaultValueHandler();
+                typeHandler = preferences.getDefaultValueHandler();
             }
         }
-        return valueHandler;
+        return typeHandler;
     }
 
     /**
@@ -669,7 +663,7 @@ public final class DBUtils {
                 }
             }
         }
-        return refs != null ? refs : Collections.emptyList();
+        return refs != null ? refs : Collections.<DBSEntityReferrer>emptyList();
     }
 
     @NotNull
@@ -870,11 +864,7 @@ public final class DBUtils {
      * Assumes that columns in both constraints are in the same order.
      */
     @Nullable
-    public static DBSEntityAttribute getReferenceAttribute(
-        @NotNull DBRProgressMonitor monitor,
-        @NotNull DBSEntityAssociation association,
-        @NotNull DBSEntityAttribute tableColumn,
-        boolean reference) throws DBException
+    public static DBSEntityAttribute getReferenceAttribute(@NotNull DBRProgressMonitor monitor, @NotNull DBSEntityAssociation association, @NotNull DBSEntityAttribute tableColumn) throws DBException
     {
         final DBSEntityConstraint refConstr = association.getReferencedConstraint();
         if (association instanceof DBSEntityReferrer && refConstr instanceof DBSEntityReferrer) {
@@ -887,12 +877,7 @@ public final class DBUtils {
             final Iterator<? extends DBSEntityAttributeRef> ownIterator = ownAttrs.iterator();
             final Iterator<? extends DBSEntityAttributeRef> refIterator = refAttrs.iterator();
             while (ownIterator.hasNext()) {
-                DBSEntityAttributeRef ownAttr = ownIterator.next();
-                if (reference) {
-                    if (ownAttr instanceof DBSTableForeignKeyColumn && ((DBSTableForeignKeyColumn) ownAttr).getReferencedColumn() == tableColumn) {
-                        return refIterator.next().getAttribute();
-                    }
-                } else if (ownAttr.getAttribute() == tableColumn) {
+                if (ownIterator.next().getAttribute() == tableColumn) {
                     return refIterator.next().getAttribute();
                 }
                 refIterator.next();
@@ -934,10 +919,7 @@ public final class DBUtils {
         // or some DML. For DML statements we mustn't set limits
         // because it sets update rows limit [SQL Server]
         boolean selectQuery = sqlQuery.getType() == SQLQueryType.SELECT && sqlQuery.isPlainSelect();
-        final boolean hasLimits = (offset > 0 || selectQuery) && maxRows > 0;
-        // This is a flag for any potential SELECT query
-        boolean possiblySelect = sqlQuery.getType() == SQLQueryType.SELECT || sqlQuery.getType() == SQLQueryType.UNKNOWN;
-        boolean limitAffectsDML = Boolean.TRUE.equals(session.getDataSource().getDataSourceFeature(DBConstants.FEATURE_LIMIT_AFFECTS_DML));
+        final boolean hasLimits = selectQuery && offset >= 0 && maxRows > 0;
 
         DBCQueryTransformer limitTransformer = null, fetchAllTransformer = null;
         if (selectQuery) {
@@ -947,7 +929,7 @@ public final class DBUtils {
                     if (session.getDataSource().getContainer().getPreferenceStore().getBoolean(ModelPreferences.RESULT_SET_MAX_ROWS_USE_SQL)) {
                         limitTransformer = transformProvider.createQueryTransformer(DBCQueryTransformType.RESULT_SET_LIMIT);
                     }
-                } else {
+                } else if (offset <= 0 && maxRows <= 0) {
                     fetchAllTransformer = transformProvider.createQueryTransformer(DBCQueryTransformType.FETCH_ALL_TABLE);
                 }
             }
@@ -968,7 +950,7 @@ public final class DBUtils {
             makeStatement(session, queryText, hasLimits);
         dbStat.setStatementSource(executionSource);
 
-        if (offset > 0 || hasLimits || (possiblySelect && maxRows > 0 && !limitAffectsDML)) {
+        if (hasLimits || offset > 0) {
             if (limitTransformer == null) {
                 // Set explicit limit - it is safe because we pretty sure that this is a plain SELECT query
                 dbStat.setLimit(offset, maxRows);
@@ -989,7 +971,7 @@ public final class DBUtils {
         boolean scrollable) throws DBCException
     {
         DBCStatementType statementType = DBCStatementType.SCRIPT;
-        //query = SQLUtils.makeUnifiedLineFeeds(query);
+        query = SQLUtils.makeUnifiedLineFeeds(query);
         if (SQLUtils.isExecQuery(SQLUtils.getDialectFromObject(session.getDataSource()), query)) {
             statementType = DBCStatementType.EXEC;
         }
@@ -1009,7 +991,7 @@ public final class DBUtils {
     {
         DBCStatementType statementType = DBCStatementType.QUERY;
         // Normalize query
-        //query = SQLUtils.makeUnifiedLineFeeds(query);
+        query = SQLUtils.makeUnifiedLineFeeds(query);
 
         if (SQLUtils.isExecQuery(SQLUtils.getDialectFromObject(session.getDataSource()), query)) {
             statementType = DBCStatementType.EXEC;
@@ -1319,7 +1301,7 @@ public final class DBUtils {
         } else if (object instanceof DBSObject) {
             return (DBSObject) object;
         } else {
-            return RuntimeUtils.getObjectAdapter(object, DBSObject.class);
+            return null;
         }
     }
 
@@ -1421,28 +1403,41 @@ public final class DBUtils {
 
     public static <TYPE extends DBPNamedObject> Comparator<TYPE> nameComparator()
     {
-        return Comparator.comparing(DBPNamedObject::getName);
+        return new Comparator<TYPE>() {
+            @Override
+            public int compare(DBPNamedObject o1, DBPNamedObject o2)
+            {
+                return o1.getName().compareTo(o2.getName());
+            }
+        };
     }
 
     public static Comparator<? super DBSAttributeBase> orderComparator() {
-        return Comparator.comparingInt(DBSAttributeBase::getOrdinalPosition);
+        return new Comparator<DBSAttributeBase>() {
+            @Override
+            public int compare(DBSAttributeBase o1, DBSAttributeBase o2) {
+                return o1.getOrdinalPosition() - o2.getOrdinalPosition();
+            }
+        };
     }
 
     public static <T extends DBPNamedObject> void orderObjects(@NotNull List<T> objects)
     {
-        objects.sort((o1, o2) -> {
-            String name1 = o1.getName();
-            String name2 = o2.getName();
-            return name1 == null && name2 == null ? 0 :
-                (name1 == null ? -1 :
-                    (name2 == null ? 1 : name1.compareTo(name2)));
+        Collections.sort(objects, new Comparator<T>() {
+            @Override
+            public int compare(T o1, T o2) {
+                String name1 = o1.getName();
+                String name2 = o2.getName();
+                return name1 == null && name2 == null ? 0 :
+                    (name1 == null ? -1 :
+                        (name2 == null ? 1 : name1.compareTo(name2)));
+            }
         });
     }
 
     public static String getClientApplicationName(DBPDataSourceContainer container, String purpose) {
         if (container.getPreferenceStore().getBoolean(ModelPreferences.META_CLIENT_NAME_OVERRIDE)) {
-            String appName = container.getPreferenceStore().getString(ModelPreferences.META_CLIENT_NAME_VALUE);
-            return GeneralUtils.replaceVariables(appName, container.getVariablesResolver());
+            return container.getPreferenceStore().getString(ModelPreferences.META_CLIENT_NAME_VALUE);
         }
         final String productTitle = GeneralUtils.getProductTitle();
         return purpose == null ? productTitle : productTitle + " - " + purpose;
@@ -1457,62 +1452,4 @@ public final class DBUtils {
 
         return DBPErrorAssistant.ErrorType.NORMAL;
     }
-
-    public static Collection<? extends DBSAttributeBase> getRealAttributes(Collection<? extends DBSAttributeBase> attributes) {
-        List<DBSAttributeBase> list = new ArrayList<>();
-        for (DBSAttributeBase attr : attributes) {
-            if (!DBUtils.isPseudoAttribute(attr) && !DBUtils.isHiddenObject(attr) && !attr.isAutoGenerated()) {
-                list.add(attr);
-            }
-        }
-
-        return list;
-    }
-
-    /**
-     * @param param DBRProgressProgress monitor or DBCSession
-     *
-     */
-    public static <T> boolean tryExecuteRecover(@NotNull T param, @NotNull DBPDataSource dataSource, @NotNull DBRRunnableParametrized<T> runnable) throws DBException {
-        int tryCount = 1;
-        boolean recoverEnabled = dataSource.getContainer().getPreferenceStore().getBoolean(ModelPreferences.EXECUTE_RECOVER_ENABLED);
-        if (recoverEnabled) {
-            tryCount += dataSource.getContainer().getPreferenceStore().getInt(ModelPreferences.EXECUTE_RECOVER_RETRY_COUNT);
-        }
-        Throwable lastError = null;
-        for (int i = 0; i < tryCount; i++) {
-            try {
-                runnable.run(param);
-                lastError = null;
-                break;
-            } catch (InvocationTargetException e) {
-                lastError = e.getTargetException();
-                if (!recoverEnabled || discoverErrorType(dataSource, lastError) != DBPErrorAssistant.ErrorType.CONNECTION_LOST) {
-                    // Can't recover
-                    break;
-                }
-                log.debug("Invalidate datasource '" + dataSource.getContainer().getName() + "' connections...");
-                DBRProgressMonitor monitor;
-                if (param instanceof DBRProgressMonitor) {
-                    monitor = (DBRProgressMonitor) param;
-                } else if (param instanceof DBCSession) {
-                    monitor = ((DBCSession) param).getProgressMonitor();
-                } else {
-                    monitor = new VoidProgressMonitor();
-                }
-                InvalidateJob.invalidateDataSource(monitor, dataSource, false);
-                if (i < tryCount - 1) {
-                    log.error("Operation failed. Retry count remains = " + (tryCount - i - 1), lastError);
-                }
-            } catch (InterruptedException e) {
-                log.error("Operation interrupted");
-                return false;
-            }
-        }
-        if (lastError != null) {
-            throw new DBException(lastError, dataSource);
-        }
-        return true;
-    }
-
 }

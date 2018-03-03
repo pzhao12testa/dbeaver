@@ -198,12 +198,7 @@ public abstract class JDBCDataSource
     }
 
     protected String getConnectionURL(DBPConnectionConfiguration connectionInfo) {
-        String url = connectionInfo.getUrl();
-        if (CommonUtils.isEmpty(url)) {
-            // It can be empty in some cases (e.g. when we create connections from command line command)
-            url = getContainer().getDriver().getDataSourceProvider().getConnectionURL(getContainer().getDriver(), connectionInfo);
-        }
-        return url;
+        return connectionInfo.getUrl();
     }
 
     protected void closeConnection(final Connection connection, String purpose)
@@ -281,11 +276,6 @@ public abstract class JDBCDataSource
     public DBPDataSourceInfo getInfo()
     {
         return dataSourceInfo;
-    }
-
-    @Override
-    public Object getDataSourceFeature(String featureId) {
-        return null;
     }
 
     @NotNull

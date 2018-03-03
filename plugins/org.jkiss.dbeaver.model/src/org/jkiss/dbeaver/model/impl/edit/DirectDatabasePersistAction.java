@@ -17,8 +17,6 @@
 package org.jkiss.dbeaver.model.impl.edit;
 
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
-import org.jkiss.dbeaver.model.exec.DBCException;
-import org.jkiss.dbeaver.model.exec.DBCSession;
 
 /**
  * Direct persist action implementation
@@ -61,10 +59,4 @@ public abstract class DirectDatabasePersistAction implements DBEPersistAction {
     public boolean isComplex() {
         return false;
     }
-
-    @Override
-    public void beforeExecute(DBCSession session) throws DBCException {
-
-    }
-
 }

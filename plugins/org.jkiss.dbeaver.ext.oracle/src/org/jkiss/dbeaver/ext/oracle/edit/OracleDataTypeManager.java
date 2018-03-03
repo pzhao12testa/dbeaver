@@ -21,7 +21,6 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.ext.oracle.model.OracleDataType;
 import org.jkiss.dbeaver.ext.oracle.model.OracleSchema;
 import org.jkiss.dbeaver.ext.oracle.model.OracleUtils;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
@@ -36,7 +35,6 @@ import org.jkiss.dbeaver.ui.editors.object.struct.EntityEditPage;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * OracleDataTypeManager
@@ -73,13 +71,13 @@ public class OracleDataTypeManager extends SQLObjectEditor<OracleDataType, Oracl
     }
 
     @Override
-    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand objectCreateCommand, Map<String, Object> options)
+    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand objectCreateCommand)
     {
         createOrReplaceProcedureQuery(actions, objectCreateCommand.getObject());
     }
 
     @Override
-    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand objectDeleteCommand, Map<String, Object> options)
+    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand objectDeleteCommand)
     {
         final OracleDataType object = objectDeleteCommand.getObject();
         actions.add(
@@ -89,13 +87,13 @@ public class OracleDataTypeManager extends SQLObjectEditor<OracleDataType, Oracl
     }
 
     @Override
-    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand objectChangeCommand, Map<String, Object> options)
+    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand objectChangeCommand)
     {
         createOrReplaceProcedureQuery(actionList, objectChangeCommand.getObject());
     }
 
     @Override
-    public long getMakerOptions(DBPDataSource dataSource)
+    public long getMakerOptions()
     {
         return FEATURE_EDITOR_ON_CREATE;
     }

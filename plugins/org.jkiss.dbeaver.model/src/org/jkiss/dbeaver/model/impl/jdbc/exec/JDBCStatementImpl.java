@@ -45,9 +45,8 @@ public class JDBCStatementImpl<STATEMENT extends Statement> implements JDBCState
 
     protected final JDBCSession connection;
     protected final STATEMENT original;
-    protected String query;
-    protected boolean disableLogging;
 
+    private String query;
 
     private long rsOffset = -1;
     private long rsMaxRows = -1;
@@ -55,6 +54,8 @@ public class JDBCStatementImpl<STATEMENT extends Statement> implements JDBCState
     private DBCExecutionSource source;
     private int updateCount;
     private Throwable executeError;
+
+    private boolean disableLogging;
 
     public JDBCStatementImpl(@NotNull JDBCSession connection, @NotNull STATEMENT original, boolean disableLogging)
     {

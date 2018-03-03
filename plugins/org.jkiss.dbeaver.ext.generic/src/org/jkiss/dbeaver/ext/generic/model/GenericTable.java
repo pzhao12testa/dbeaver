@@ -278,25 +278,17 @@ public class GenericTable extends JDBCTable<GenericDataSource, GenericStructCont
     }
 
     @Override
-    @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException {
-        if (CommonUtils.getOption(options, DBPScriptObject.OPTION_REFRESH)) {
-            ddl = null;
-        }
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException {
         if (ddl == null) {
             if (isView()) {
-                ddl = getDataSource().getMetaModel().getViewDDL(monitor, this, options);
+                ddl = getDataSource().getMetaModel().getViewDDL(monitor, this);
             } else if (!isPersisted()) {
                 ddl = "";
             } else {
-                ddl = getDataSource().getMetaModel().getTableDDL(monitor, this, options);
+                ddl = getDataSource().getMetaModel().getTableDDL(monitor, this);
             }
         }
         return ddl;
-    }
-
-    public boolean isPhysicalTable() {
-        return !isView();
     }
 
     private static class ForeignKeyInfo {

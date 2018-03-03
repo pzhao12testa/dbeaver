@@ -37,7 +37,6 @@ import org.jkiss.dbeaver.model.struct.rdb.DBSTableForeignKey;
 
 import java.sql.ResultSet;
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -162,7 +161,7 @@ public class ExasolTableForeignKey extends JDBCTableConstraint<ExasolTable> impl
     }
 
 	@Override
-	public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options)
+	public String getObjectDefinitionText(DBRProgressMonitor monitor)
 			throws DBException
 	{
 		return ExasolUtils.getFKDdl(this, monitor);

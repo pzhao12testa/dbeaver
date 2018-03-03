@@ -23,12 +23,12 @@ import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ext.postgresql.PostgreConstants;
 import org.jkiss.dbeaver.ext.postgresql.PostgreUtils;
 import org.jkiss.dbeaver.model.*;
+import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.DBCLogicalOperator;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCPreparedStatement;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCResultSet;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCSession;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCStatement;
-import org.jkiss.dbeaver.model.impl.DBPositiveNumberTransformer;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCDataSource;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectCache;
@@ -99,7 +99,6 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
     private int arrayDim;
     private long collationId;
     private String defaultValue;
-    private String canonicalName;
 
     private final AttributeCache attributeCache;
     private Object[] enumValues;
@@ -107,9 +106,6 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
     public PostgreDataType(@NotNull JDBCSession session, @NotNull PostgreSchema owner, long typeId, int valueType, String name, int length, JDBCResultSet dbResult) throws DBException {
         super(owner, valueType, name, null, false, true, length, -1, -1);
         this.alias = false;
-        if (owner.isCatalogSchema()) {
-            this.canonicalName = PostgreConstants.DATA_TYPE_CANONICAL_NAMES.get(name);
-        }
         this.typeId = typeId;
         this.typeType = PostgreTypeType.b;
         String typTypeStr = JDBCUtils.safeGetString(dbResult, "typtype");
@@ -117,7 +113,7 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
             if (typTypeStr != null && !typTypeStr.isEmpty()) {
                 this.typeType = PostgreTypeType.valueOf(typTypeStr.toLowerCase(Locale.ENGLISH));
             }
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.debug("Invalid type type [" + typTypeStr + "] - " + e.getMessage());
         }
         this.typeCategory = PostgreTypeCategory.X;
@@ -126,7 +122,7 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
             if (typCategoryStr != null && !typCategoryStr.isEmpty()) {
                 this.typeCategory = PostgreTypeCategory.valueOf(typCategoryStr.toUpperCase(Locale.ENGLISH));
             }
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.debug("Invalid type category [" + typCategoryStr + "] - " + e.getMessage());
         }
 
@@ -236,20 +232,6 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
         }
     }
 
-    @Override
-    public String getName() {
-        return super.getName();
-    }
-
-    @Override
-    public String getFullTypeName() {
-        return super.getFullTypeName();
-    }
-
-    public String getCanonicalName() {
-        return canonicalName;
-    }
-
     @NotNull
     @Override
     public PostgreDataSource getDataSource() {
@@ -273,7 +255,7 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
 
     @Nullable
     @Override
-    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBCException {
         return getElementType();
     }
 
@@ -485,7 +467,6 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
         return this;
     }
 
-    @Property(category = CAT_MAIN, viewable = true, order = 16)
     public Object[] getEnumValues() {
         return enumValues;
     }
@@ -538,7 +519,6 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
         long typeId = JDBCUtils.safeGetLong(dbResult, "oid");
         String name = JDBCUtils.safeGetString(dbResult, "typname");
         if (CommonUtils.isEmpty(name)) {
-            log.debug("Empty name for data type " + typeId);
             return null;
         }
         int typeLength = JDBCUtils.safeGetInt(dbResult, "typlen");
@@ -556,7 +536,7 @@ public class PostgreDataType extends JDBCDataType<PostgreSchema> implements Post
         }
 
         int valueType;
-        if (ArrayUtils.contains(OID_TYPES, name) || name.equals(PostgreConstants.TYPE_HSTORE)) {
+        if (ArrayUtils.contains(OID_TYPES, name) || name.equals("hstore")) {
             valueType = Types.VARCHAR;
         } else {
             if (typeCategory == null) {

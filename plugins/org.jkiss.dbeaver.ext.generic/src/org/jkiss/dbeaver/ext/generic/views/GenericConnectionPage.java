@@ -27,14 +27,13 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.core.DBeaverUI;
 import org.jkiss.dbeaver.ext.generic.GenericConstants;
 import org.jkiss.dbeaver.ext.generic.GenericMessages;
-import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.connection.DBPDriver;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
+import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.registry.DataSourceDescriptor;
 import org.jkiss.dbeaver.registry.driver.DriverDescriptor;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
@@ -412,27 +411,6 @@ public class GenericConnectionPage extends ConnectionPageAbstract implements ICo
         }
 
         activated = true;
-
-        DBeaverUI.asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                // Set first control
-                if (CommonUtils.isEmpty(site.getDriver().getSampleURL())) {
-                    urlText.setFocus();
-                } else  if (hostText != null && hostText.isVisible()) {
-                    hostText.setFocus();
-                } else  if (serverText != null && serverText.isVisible()) {
-                    serverText.setFocus();
-                } else  if (dbText != null && dbText.isVisible()) {
-                    dbText.setFocus();
-                } else  if (pathText != null && pathText.isVisible()) {
-                    pathText.setFocus();
-                } else  if (userNameText != null && userNameText.isVisible()) {
-                    userNameText.setFocus();
-                }
-            }
-        });
-
     }
 
     @Override
@@ -571,9 +549,7 @@ public class GenericConnectionPage extends ConnectionPageAbstract implements ICo
 
     private void saveAndUpdate()
     {
-        // Save settings to update URL
         saveSettings(site.getActiveDataSource());
-        // Update buttons
         site.updateButtons();
     }
 

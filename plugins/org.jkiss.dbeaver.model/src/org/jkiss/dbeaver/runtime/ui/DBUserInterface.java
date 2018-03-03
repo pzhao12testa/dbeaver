@@ -74,11 +74,6 @@ public class DBUserInterface {
                 DBUserInterface.getInstance().showError("Execute process", processDescriptor.getName(), e);
             }
         }
-
-        @Override
-        public void executeInUI(Runnable runnable) {
-            runnable.run();
-        }
     };
 
     public static DBPPlatformUI getInstance() {

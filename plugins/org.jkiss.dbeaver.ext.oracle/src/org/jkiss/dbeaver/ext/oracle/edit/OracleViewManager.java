@@ -21,7 +21,6 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.ext.oracle.model.OracleSchema;
 import org.jkiss.dbeaver.ext.oracle.model.OracleView;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
@@ -34,7 +33,6 @@ import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * OracleViewManager
@@ -42,7 +40,7 @@ import java.util.Map;
 public class OracleViewManager extends SQLObjectEditor<OracleView, OracleSchema> {
 
     @Override
-    public long getMakerOptions(DBPDataSource dataSource)
+    public long getMakerOptions()
     {
         return FEATURE_EDITOR_ON_CREATE;
     }
@@ -54,7 +52,7 @@ public class OracleViewManager extends SQLObjectEditor<OracleView, OracleSchema>
         if (CommonUtils.isEmpty(command.getObject().getName())) {
             throw new DBException("View name cannot be empty");
         }
-        if (CommonUtils.isEmpty(command.getObject().getViewText())) {
+        if (CommonUtils.isEmpty(command.getObject().getAdditionalInfo().getText())) {
             throw new DBException("View definition cannot be empty");
         }
     }
@@ -70,24 +68,24 @@ public class OracleViewManager extends SQLObjectEditor<OracleView, OracleSchema>
     protected OracleView createDatabaseObject(DBRProgressMonitor monitor, DBECommandContext context, OracleSchema parent, Object copyFrom)
     {
         OracleView newView = new OracleView(parent, "NEW_VIEW"); //$NON-NLS-1$
-        newView.setViewText("CREATE OR REPLACE VIEW " + newView.getFullyQualifiedName(DBPEvaluationContext.DDL) + " AS\nSELECT");
+        newView.getAdditionalInfo().setText("CREATE OR REPLACE VIEW " + newView.getFullyQualifiedName(DBPEvaluationContext.DDL) + " AS\nSELECT");
         return newView;
     }
 
     @Override
-    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand command, Map<String, Object> options)
+    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand command)
     {
         createOrReplaceViewQuery(actions, command);
     }
 
     @Override
-    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command, Map<String, Object> options)
+    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command)
     {
         createOrReplaceViewQuery(actionList, command);
     }
 
     @Override
-    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command, Map<String, Object> options)
+    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command)
     {
         actions.add(
             new SQLDatabasePersistAction("Drop view", "DROP VIEW " + command.getObject().getFullyQualifiedName(DBPEvaluationContext.DDL)) //$NON-NLS-2$
@@ -99,7 +97,7 @@ public class OracleViewManager extends SQLObjectEditor<OracleView, OracleSchema>
         final OracleView view = command.getObject();
         boolean hasComment = command.getProperty("comment") != null;
         if (!hasComment || command.getProperties().size() > 1) {
-            actions.add(new SQLDatabasePersistAction("Create view", view.getViewText()));
+            actions.add(new SQLDatabasePersistAction("Create view", view.getAdditionalInfo().getText()));
         }
         if (hasComment) {
             actions.add(new SQLDatabasePersistAction(

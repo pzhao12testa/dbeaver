@@ -53,8 +53,8 @@ public class GenericTableColumn extends JDBCTableColumn<GenericTable> implements
         int ordinalPosition,
         long columnSize,
         long charLength,
-        Integer scale,
-        Integer precision,
+        int scale,
+        int precision,
         int radix,
         boolean notNull,
         String remarks,
@@ -100,7 +100,7 @@ public class GenericTableColumn extends JDBCTableColumn<GenericTable> implements
 
     @Override
     @Property(viewable = true, editable = true, valueRenderer = DBPositiveNumberTransformer.class, order = 41)
-    public Integer getScale()
+    public int getScale()
     {
         return super.getScale();
     }

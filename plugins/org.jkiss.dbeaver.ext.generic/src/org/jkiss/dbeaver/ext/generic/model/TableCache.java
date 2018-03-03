@@ -82,7 +82,11 @@ public class TableCache extends JDBCStructLookupCache<GenericStructContainer, Ge
     @NotNull
     @Override
     public JDBCStatement prepareLookupStatement(@NotNull JDBCSession session, @NotNull GenericStructContainer owner, @Nullable GenericTable object, @Nullable String objectName) throws SQLException {
-        return dataSource.getMetaModel().prepareTableLoadStatement(session, owner, object, objectName);
+        return session.getMetaData().getTables(
+            owner.getCatalog() == null ? null : owner.getCatalog().getName(),
+            owner.getSchema() == null ? null : owner.getSchema().getName(),
+            object == null && objectName == null ? owner.getDataSource().getAllObjectsPattern() : (object != null ? object.getName() : objectName),
+            null).getSourceStatement();
     }
 
     @Nullable
@@ -139,8 +143,8 @@ public class TableCache extends JDBCStructLookupCache<GenericStructContainer, Ge
         String typeName = GenericUtils.safeGetStringTrimmed(columnObject, dbResult, JDBCConstants.TYPE_NAME);
         long columnSize = GenericUtils.safeGetLong(columnObject, dbResult, JDBCConstants.COLUMN_SIZE);
         boolean isNotNull = GenericUtils.safeGetInt(columnObject, dbResult, JDBCConstants.NULLABLE) == DatabaseMetaData.columnNoNulls;
-        Integer scale = GenericUtils.safeGetInteger(columnObject, dbResult, JDBCConstants.DECIMAL_DIGITS);
-        Integer precision = null;
+        int scale = GenericUtils.safeGetInt(columnObject, dbResult, JDBCConstants.DECIMAL_DIGITS);
+        int precision = 0;//GenericUtils.safeGetInt(dbResult, JDBCConstants.COLUMN_);
         if (valueType == Types.NUMERIC || valueType == Types.DECIMAL) {
             precision = (int) columnSize;
         }
@@ -174,10 +178,7 @@ public class TableCache extends JDBCStructLookupCache<GenericStructContainer, Ge
             typeName = typeName + "(" + charLength + ")";
         }
 */
-
-        return getDataSource().getMetaModel().createTableColumnImpl(
-            session,
-            dbResult,
+        return new GenericTableColumn(
             table,
             columnName,
             typeName, valueType, sourceType, ordinalPos,

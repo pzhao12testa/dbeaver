@@ -252,12 +252,6 @@ public class TabbedFolderPageEditor extends TabbedFolderPage implements IDatabas
         public TabbedFolderPageEditorSite(MultiPageEditorPart multiPageEditor, IEditorPart editor) {
             super(multiPageEditor, editor);
         }
-        
-        @Override
-        public String getId() {
-            String id = editorDescriptor.getId();
-            return id;
-        }
 
         @NotNull
         @Override

@@ -20,7 +20,6 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.sql.SQLDataSource;
 import org.jkiss.dbeaver.model.sql.SQLQuery;
 import org.jkiss.dbeaver.model.sql.SQLQueryTransformer;
-import org.jkiss.dbeaver.model.sql.SQLSyntaxManager;
 
 /**
  * SQLQueryTransformerExpression.
@@ -28,7 +27,7 @@ import org.jkiss.dbeaver.model.sql.SQLSyntaxManager;
 */
 public class SQLQueryTransformerExpression implements SQLQueryTransformer {
     @Override
-    public SQLQuery transformQuery(SQLDataSource dataSource, SQLSyntaxManager syntaxManager, SQLQuery query) throws DBException {
+    public SQLQuery transformQuery(SQLDataSource dataSource, SQLQuery query) throws DBException {
         String dualTableName = dataSource.getSQLDialect().getDualTableName();
         String newQuery = "SELECT " + query.getText();
         if (dualTableName != null) {

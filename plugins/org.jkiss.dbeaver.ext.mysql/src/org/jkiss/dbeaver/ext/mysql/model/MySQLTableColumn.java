@@ -30,8 +30,6 @@ import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCColumnKeyType;
 import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCTableColumn;
 import org.jkiss.dbeaver.model.meta.IPropertyValueListProvider;
 import org.jkiss.dbeaver.model.meta.Property;
-import org.jkiss.dbeaver.model.sql.SQLConstants;
-import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.dbeaver.model.struct.DBSDataType;
 import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
 import org.jkiss.dbeaver.model.struct.rdb.DBSTableColumn;
@@ -138,24 +136,20 @@ public class MySQLTableColumn extends JDBCTableColumn<MySQLTableBase> implements
         this.charLength = JDBCUtils.safeGetLong(dbResult, MySQLConstants.COL_CHARACTER_MAXIMUM_LENGTH);
         if (this.charLength <= 0) {
             if (dataType != null) {
-                setMaxLength(CommonUtils.toInt(dataType.getPrecision()));
+                setMaxLength(dataType.getPrecision());
             }
         } else {
             setMaxLength(this.charLength);
         }
         this.comment = JDBCUtils.safeGetString(dbResult, MySQLConstants.COL_COLUMN_COMMENT);
         setRequired(!"YES".equals(JDBCUtils.safeGetString(dbResult, MySQLConstants.COL_IS_NULLABLE)));
-        setScale(JDBCUtils.safeGetInteger(dbResult, MySQLConstants.COL_NUMERIC_SCALE));
-        setPrecision(JDBCUtils.safeGetInteger(dbResult, MySQLConstants.COL_NUMERIC_PRECISION));
+        setScale(JDBCUtils.safeGetInt(dbResult, MySQLConstants.COL_NUMERIC_SCALE));
+        setPrecision(JDBCUtils.safeGetInt(dbResult, MySQLConstants.COL_NUMERIC_PRECISION));
         String defaultValue = JDBCUtils.safeGetString(dbResult, MySQLConstants.COL_COLUMN_DEFAULT);
         if (defaultValue != null) {
             switch (getDataKind()) {
                 case STRING:
-                    // Escape if it is not NULL (#1913)
-                    // Although I didn't reproduce that locally - perhaps depends on server config.
-                    if (!SQLConstants.NULL_VALUE.equals(defaultValue) && !SQLUtils.isStringQuoted(defaultValue)) {
-                        defaultValue = SQLUtils.quoteString(getDataSource(), defaultValue);
-                    }
+                    defaultValue = "'" + defaultValue + "'";
                     break;
                 case DATETIME:
                     if (!defaultValue.isEmpty() && Character.isDigit(defaultValue.charAt(0))) {
@@ -227,14 +221,14 @@ public class MySQLTableColumn extends JDBCTableColumn<MySQLTableBase> implements
 
     @Override
     //@Property(viewable = true, order = 41)
-    public Integer getScale()
+    public int getScale()
     {
         return super.getScale();
     }
 
     @Override
     //@Property(viewable = true, order = 42)
-    public Integer getPrecision()
+    public int getPrecision()
     {
         return super.getPrecision();
     }

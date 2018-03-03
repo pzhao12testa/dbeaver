@@ -16,28 +16,20 @@
  */
 package org.jkiss.dbeaver.ext.postgresql.edit;
 
-import org.eclipse.jface.dialogs.IDialogConstants;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.core.DBeaverUI;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreDataSource;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreDatabase;
-import org.jkiss.dbeaver.ext.postgresql.ui.PostgreCreateDatabaseDialog;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEObjectRenamer;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.impl.DBSObjectCache;
-import org.jkiss.dbeaver.model.impl.edit.SQLDatabasePersistActionAtomic;
+import org.jkiss.dbeaver.model.impl.edit.SQLDatabasePersistAction;
 import org.jkiss.dbeaver.model.impl.sql.edit.SQLObjectEditor;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
-import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
-import org.jkiss.dbeaver.ui.UITask;
-import org.jkiss.utils.CommonUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * PostgreDatabaseManager
@@ -45,7 +37,7 @@ import java.util.Map;
 public class PostgreDatabaseManager extends SQLObjectEditor<PostgreDatabase, PostgreDataSource> implements DBEObjectRenamer<PostgreDatabase> {
 
     @Override
-    public long getMakerOptions(DBPDataSource dataSource)
+    public long getMakerOptions()
     {
         return FEATURE_SAVE_IMMEDIATELY;
     }
@@ -60,58 +52,37 @@ public class PostgreDatabaseManager extends SQLObjectEditor<PostgreDatabase, Pos
     @Override
     protected PostgreDatabase createDatabaseObject(DBRProgressMonitor monitor, DBECommandContext context, PostgreDataSource parent, Object copyFrom)
     {
-        return new UITask<PostgreDatabase>() {
-            @Override
-            protected PostgreDatabase runTask() {
-                PostgreCreateDatabaseDialog dialog = new PostgreCreateDatabaseDialog(DBeaverUI.getActiveWorkbenchShell(), parent);
-                if (dialog.open() != IDialogConstants.OK_ID) {
-                    return null;
-                }
-                return new PostgreDatabase(parent, dialog.getName(), dialog.getOwner(), dialog.getTemplateName(), dialog.getTablespace(), dialog.getEncoding());
-            }
-        }.execute();
+/*
+        PostgreCreateSchemaDialog dialog = new PostgreCreateSchemaDialog(DBeaverUI.getActiveWorkbenchShell(), parent);
+        if (dialog.open() != IDialogConstants.OK_ID) {
+            return null;
+        }
+        return new PostgreSchema(parent, dialog.getName(), dialog.getOwner());
+*/
+        return null;
     }
 
     @Override
-    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand command, Map<String, Object> options)
+    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand command)
     {
         final PostgreDatabase database = command.getObject();
-        StringBuilder sql = new StringBuilder();
-        sql.append("CREATE DATABASE ").append(DBUtils.getQuotedIdentifier(database));
-        try {
-            VoidProgressMonitor monitor = new VoidProgressMonitor();
-            if (database.getDBA(monitor) != null) {
-                sql.append("\nOWNER = ").append(database.getDBA(monitor).getName());
-            }
-            if (!CommonUtils.isEmpty(database.getTemplateName())) {
-                sql.append("\nTEMPLATE = ").append(database.getTemplateName());
-            }
-            if (database.getDefaultEncoding(monitor) != null) {
-                sql.append("\nENCODING = '").append(database.getDefaultEncoding(monitor).getName()).append("'");
-            }
-            if (database.getDefaultTablespace(monitor) != null) {
-                sql.append("\nTABLESPACE = ").append(database.getDefaultTablespace(monitor).getName());
-            }
-        } catch (DBException e) {
-            log.error(e);
-        }
         actions.add(
-            new SQLDatabasePersistActionAtomic("Create database", sql.toString())
+            new SQLDatabasePersistAction("Create database", "CREATE DATABASE " + DBUtils.getQuotedIdentifier(database)) //$NON-NLS-2$
         );
     }
 
     @Override
-    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command, Map<String, Object> options)
+    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command)
     {
         actions.add(
-            new SQLDatabasePersistActionAtomic("Drop database", "DROP DATABASE " + DBUtils.getQuotedIdentifier(command.getObject())) //$NON-NLS-2$
+            new SQLDatabasePersistAction("Drop database", "DROP DATABASE " + DBUtils.getQuotedIdentifier(command.getObject())) //$NON-NLS-2$
         );
     }
 
     @Override
     public void renameObject(DBECommandContext commandContext, PostgreDatabase catalog, String newName) throws DBException
     {
-        throw new DBException("Direct database rename is not yet implemented in PostgreSQL. You should use export/import functions for that.");
+        throw new DBException("Direct database rename is not yet implemented in Postgre. You should use export/import functions for that.");
     }
 
 }

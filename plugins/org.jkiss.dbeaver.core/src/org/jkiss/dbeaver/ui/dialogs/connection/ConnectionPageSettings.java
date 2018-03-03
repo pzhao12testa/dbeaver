@@ -77,7 +77,7 @@ class ConnectionPageSettings extends ActiveWizardPage<ConnectionWizard> implemen
         this.wizard = wizard;
         this.viewDescriptor = viewDescriptor;
 
-        setTitle(wizard.isNew() ? viewDescriptor.getLabel() : CoreMessages.dialog_setting_connection_wizard_title);
+        setTitle(wizard.isNew() ? viewDescriptor.getLabel() : "Connection settings");
         setDescription(CoreMessages.dialog_connection_description);
     }
 
@@ -124,15 +124,6 @@ class ConnectionPageSettings extends ActiveWizardPage<ConnectionWizard> implemen
         }
         activateCurrentItem();
         getContainer().updateTitleBar();
-    }
-
-    @Override
-    public void deactivatePage() {
-        DataSourceDescriptor connectionInfo = getActiveDataSource();
-        if (this.activated.contains(connectionInfo) && this.connectionEditor != null) {
-            this.connectionEditor.saveSettings(connectionInfo);
-        }
-        super.deactivatePage();
     }
 
     @Override
@@ -202,7 +193,7 @@ class ConnectionPageSettings extends ActiveWizardPage<ConnectionWizard> implemen
                     item.setData(page);
                     Control pageControl = page.getControl();
                     item.setControl(pageControl);
-                    item.setText(CommonUtils.isEmpty(page.getTitle()) ? CoreMessages.dialog_setting_connection_general : page.getTitle());
+                    item.setText(CommonUtils.isEmpty(page.getTitle()) ? "General" : page.getTitle());
                     item.setToolTipText(page.getDescription());
                 }
                 tabFolder.setSelection(0);

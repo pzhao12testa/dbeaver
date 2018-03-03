@@ -72,8 +72,6 @@ public class OracleConnectionPage extends ConnectionPageAbstract implements ICom
     private static ImageDescriptor logoImage = Activator.getImageDescriptor("icons/oracle_logo.png"); //$NON-NLS-1$
     private TextWithOpenFolder tnsPathText;
 
-    private boolean activated = false;
-
     @Override
     public void dispose()
     {
@@ -166,7 +164,6 @@ public class OracleConnectionPage extends ConnectionPageAbstract implements ICom
         sidServiceCombo.add(OracleConnectionType.SID.getTitle());
         sidServiceCombo.add(OracleConnectionType.SERVICE.getTitle());
         sidServiceCombo.select(1);
-        sidServiceCombo.addModifyListener(controlModifyListener);
 
     }
 
@@ -428,8 +425,6 @@ public class OracleConnectionPage extends ConnectionPageAbstract implements ICom
         if (roleName != null) {
             userRoleCombo.setText(roleName.toUpperCase(Locale.ENGLISH));
         }
-
-        activated = true;
     }
 
     @Override
@@ -469,14 +464,12 @@ public class OracleConnectionPage extends ConnectionPageAbstract implements ICom
             connectionInfo.getProviderProperties().remove(OracleConstants.PROP_INTERNAL_LOGON);
         }
 
-        super.saveSettings(dataSource);
+        saveConnectionURL(connectionInfo);
     }
 
     private void updateUI()
     {
-        if (activated) {
-            site.updateButtons();
-        }
+        site.updateButtons();
     }
 
     private class ControlsListener implements ModifyListener, SelectionListener {

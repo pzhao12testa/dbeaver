@@ -20,29 +20,22 @@ import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
-import org.jkiss.dbeaver.model.DBPScriptObject;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCResultSet;
-import org.jkiss.dbeaver.model.exec.jdbc.JDBCSession;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.struct.JDBCTableConstraint;
-import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSEntityConstraintType;
-import org.jkiss.utils.CommonUtils;
 
-import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * PostgreTableConstraintBase
  */
-public abstract class PostgreTableConstraintBase extends JDBCTableConstraint<PostgreTableBase> implements PostgreObject,DBPScriptObject {
+public abstract class PostgreTableConstraintBase extends JDBCTableConstraint<PostgreTableBase> implements PostgreObject {
     private static final Log log = Log.getLog(PostgreTableConstraintBase.class);
 
     private long oid;
-    private String constrDDL;
 
     public PostgreTableConstraintBase(PostgreTableBase table, String name, DBSEntityConstraintType constraintType, JDBCResultSet resultSet) throws DBException {
         super(table, name, null, constraintType, true);
@@ -83,25 +76,5 @@ public abstract class PostgreTableConstraintBase extends JDBCTableConstraint<Pos
     }
 
     abstract void cacheAttributes(DBRProgressMonitor monitor, List<? extends PostgreTableConstraintColumn> children, boolean secondPass);
-
-    @Override
-    @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException
-    {
-        if (constrDDL == null && isPersisted()) {
-            try (JDBCSession session = DBUtils.openMetaSession(monitor, getDataSource(), "Read constraint definition")) {
-                constrDDL =
-                    "CONSTRAINT " + DBUtils.getQuotedIdentifier(this) + " " +
-                    JDBCUtils.queryString(session, "SELECT pg_catalog.pg_get_constraintdef(?)", getObjectId());
-            } catch (SQLException e) {
-                throw new DBException(e, getDataSource());
-            }
-        }
-        if (CommonUtils.getOption(options, DBPScriptObject.OPTION_EMBEDDED_SOURCE)) {
-            return constrDDL;
-        } else {
-            return "ALTER TABLE " + getTable().getFullyQualifiedName(DBPEvaluationContext.DDL) + " ADD " + constrDDL;
-        }
-    }
 
 }

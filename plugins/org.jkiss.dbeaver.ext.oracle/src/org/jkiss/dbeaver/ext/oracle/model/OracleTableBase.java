@@ -49,7 +49,6 @@ import org.jkiss.utils.CommonUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * OracleTable base
@@ -269,10 +268,10 @@ public abstract class OracleTableBase extends JDBCTable<OracleDataSource, Oracle
         return null;
     }
 
-    public String getDDL(DBRProgressMonitor monitor, OracleDDLFormat ddlFormat, Map<String, Object> options)
+    public String getDDL(DBRProgressMonitor monitor, OracleDDLFormat ddlFormat)
         throws DBException
     {
-        return OracleUtils.getDDL(monitor, getTableTypeName(), this, ddlFormat, options);
+        return OracleUtils.getDDL(monitor, getTableTypeName(), this, ddlFormat);
     }
 
     @NotNull
@@ -369,11 +368,10 @@ public abstract class OracleTableBase extends JDBCTable<OracleDataSource, Oracle
         @Override
         protected JDBCStatement prepareObjectsStatement(@NotNull JDBCSession session, @NotNull OracleTableBase tableBase) throws SQLException
         {
-            boolean hasDBA = tableBase.getDataSource().isViewAvailable(session.getProgressMonitor(), OracleConstants.SCHEMA_SYS, OracleConstants.VIEW_DBA_TAB_PRIVS);
             final JDBCPreparedStatement dbStat = session.prepareStatement(
                 "SELECT p.*\n" +
-                    "FROM " + (hasDBA ? "DBA_TAB_PRIVS p" : "ALL_TAB_PRIVS p") + "\n" +
-                    "WHERE p."+ (hasDBA ? "OWNER": "TABLE_SCHEMA") +"=? AND p.TABLE_NAME =?");
+                    "FROM DBA_TAB_PRIVS p\n" +
+                    "WHERE p.OWNER=? AND p.TABLE_NAME =?");
             dbStat.setString(1, tableBase.getSchema().getName());
             dbStat.setString(2, tableBase.getName());
             return dbStat;

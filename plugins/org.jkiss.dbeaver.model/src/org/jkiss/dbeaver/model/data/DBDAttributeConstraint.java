@@ -58,11 +58,6 @@ public class DBDAttributeConstraint extends DBDAttributeConstraintBase {
         return originalVisualPosition;
     }
 
-    @Override
-    public boolean hasFilter() {
-        return super.hasFilter() || originalVisualPosition != getVisualPosition();
-    }
-
     public void reset()
     {
         super.reset();

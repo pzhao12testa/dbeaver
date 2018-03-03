@@ -27,28 +27,21 @@ import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.IWorkbenchPropertyPage;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.PreferenceLinkArea;
 import org.eclipse.ui.preferences.IWorkbenchPreferenceContainer;
 import org.jkiss.code.Nullable;
-import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.DBeaverPreferences;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.core.DBeaverCore;
-import org.jkiss.dbeaver.core.DBeaverUI;
-import org.jkiss.dbeaver.model.app.DBPPlatformLanguage;
+import org.jkiss.dbeaver.model.DBConstants;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
-import org.jkiss.dbeaver.registry.language.PlatformLanguageDescriptor;
-import org.jkiss.dbeaver.registry.language.PlatformLanguageRegistry;
+import org.jkiss.dbeaver.tools.transfer.stream.StreamTransferConsumer;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.TextWithOpenFile;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.dbeaver.utils.PrefUtils;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.dbeaver.utils.SystemVariablesResolver;
-import org.jkiss.utils.CommonUtils;
-
-import java.util.List;
 
 /**
  * PrefPageDatabaseGeneral
@@ -58,12 +51,11 @@ public class PrefPageDatabaseGeneral extends AbstractPrefPage implements IWorkbe
     public static final String PAGE_ID = "org.jkiss.dbeaver.preferences.main.common"; //$NON-NLS-1$
 
     private Button automaticUpdateCheck;
-    private Combo workspaceLanguage;
 
     private Button longOperationsCheck;
     private Spinner longOperationsTimeout;
 
-    //private Combo defaultResourceEncoding;
+    private Combo defaultResourceEncoding;
 
     private Button logsDebugEnabled;
     private TextWithOpenFile logsDebugLocation;
@@ -86,68 +78,45 @@ public class PrefPageDatabaseGeneral extends AbstractPrefPage implements IWorkbe
         Composite composite = UIUtils.createPlaceholder(parent, 1, 5);
 
         {
-            Group groupObjects = UIUtils.createControlGroup(composite, CoreMessages.pref_page_ui_general_group_general, 2, GridData.VERTICAL_ALIGN_BEGINNING, 0);
-            automaticUpdateCheck = UIUtils.createCheckbox(groupObjects, CoreMessages.pref_page_ui_general_checkbox_automatic_updates, null, false, 2);
-            //automaticUpdateCheck.setLayoutData(new GridData(GridData.BEGINNING, GridData.BEGINNING, true, false, 2, 1));
-        }
-        {
-            Group groupLanguage = UIUtils.createControlGroup(composite, CoreMessages.pref_page_ui_general_group_language, 2, GridData.VERTICAL_ALIGN_BEGINNING, 0);
-
-            workspaceLanguage = UIUtils.createLabelCombo(groupLanguage, CoreMessages.pref_page_ui_general_combo_language, CoreMessages.pref_page_ui_general_combo_language_tip, SWT.READ_ONLY | SWT.DROP_DOWN);
-            workspaceLanguage.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
-            List<PlatformLanguageDescriptor> languages = PlatformLanguageRegistry.getInstance().getLanguages();
-            DBPPlatformLanguage pLanguage = DBeaverCore.getInstance().getLanguage();
-            for (int i = 0; i < languages.size(); i++) {
-                PlatformLanguageDescriptor lang = languages.get(i);
-                workspaceLanguage.add(lang.getLabel());
-                if (CommonUtils.equalObjects(pLanguage, lang)) {
-                    workspaceLanguage.select(i);
-                }
-            }
-            if (workspaceLanguage.getSelectionIndex() < 0) {
-                workspaceLanguage.select(0);
-            }
-
-            Label tipLabel = UIUtils.createLabel(groupLanguage, CoreMessages.pref_page_ui_general_label_options_take_effect_after_restart);
-            tipLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING, GridData.VERTICAL_ALIGN_BEGINNING, false, false , 2, 1));
+            Group groupObjects = UIUtils.createControlGroup(composite, CoreMessages.pref_page_ui_general_group_general, 1, GridData.VERTICAL_ALIGN_BEGINNING, 300);
+            automaticUpdateCheck = UIUtils.createCheckbox(groupObjects, CoreMessages.pref_page_ui_general_checkbox_automatic_updates, false);
+            automaticUpdateCheck.setLayoutData(new GridData(GridData.BEGINNING, GridData.BEGINNING, true, false, 2, 1));
         }
 
         // Agent settings
         {
-            Group agentGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_ui_general_group_task_bar, 2, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, 0);
+            Group agentGroup = UIUtils.createControlGroup(composite, "Task Bar", 2, SWT.NONE, 0);
 
             longOperationsCheck = UIUtils.createCheckbox(agentGroup,
-                    CoreMessages.pref_page_ui_general_label_enable_long_operations,
-                    CoreMessages.pref_page_ui_general_label_enable_long_operations_tip, false, 2);
+                    "Enable long-time operations notification",
+                    "Shows special notification in system taskbar after long-time operation (e.g. SQL query) finish.", false, 2);
 
-            longOperationsTimeout = UIUtils.createLabelSpinner(agentGroup, CoreMessages.pref_page_ui_general_label_long_operation_timeout, 0, 0, Integer.MAX_VALUE);
+            longOperationsTimeout = UIUtils.createLabelSpinner(agentGroup, "Long-time operation timeout", 0, 0, Integer.MAX_VALUE);
 
             if (RuntimeUtils.isPlatformMacOS()) {
                 ControlEnableState.disable(agentGroup);
             }
         }
 
-/*
         {
             // Resources
-            Group groupResources = UIUtils.createControlGroup(composite, CoreMessages.pref_page_ui_general_group_resources, 2, GridData.VERTICAL_ALIGN_BEGINNING, 0);
+            Group groupResources = UIUtils.createControlGroup(composite, "Resources", 2, GridData.VERTICAL_ALIGN_BEGINNING, 0);
 
-            UIUtils.createControlLabel(groupResources, CoreMessages.pref_page_ui_general_label_default_resource_encoding);
+            UIUtils.createControlLabel(groupResources, "Default resource encoding");
             defaultResourceEncoding = UIUtils.createEncodingCombo(groupResources, GeneralUtils.DEFAULT_ENCODING);
-            defaultResourceEncoding.setToolTipText(CoreMessages.pref_page_ui_general_label_set_default_resource_encoding_tip);
+            defaultResourceEncoding.setToolTipText("Default encoding for scripts and text files. Change requires restart");
 
         }
-*/
 
         {
             // Logs
-            Group groupLogs = UIUtils.createControlGroup(composite, CoreMessages.pref_page_ui_general_group_debug_logs, 2, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, 0);
+            Group groupLogs = UIUtils.createControlGroup(composite, "Debug logs", 2, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, 0);
 
             logsDebugEnabled = UIUtils.createCheckbox(groupLogs,
-                   CoreMessages.pref_page_ui_general_label_enable_debug_logs,
-                    CoreMessages.pref_page_ui_general_label_enable_debug_logs_tip, false, 2);
-            UIUtils.createControlLabel(groupLogs, CoreMessages.pref_page_ui_general_label_log_file_location);
-            logsDebugLocation = new TextWithOpenFile(groupLogs, CoreMessages.pref_page_ui_general_label_open_file_text, new String[] { "*.log", "*.txt" } );
+                    "Enable debug logs",
+                    "Debug logs can be used for DBeaver itself debugging. Also used to store all errors/warnings/messages", false, 2);
+            UIUtils.createControlLabel(groupLogs, "Log file location");
+            logsDebugLocation = new TextWithOpenFile(groupLogs, "Debug log file location", new String[] { "*.log", "*.txt" } );
             UIUtils.installContentProposal(
                     logsDebugLocation.getTextControl(),
                     new TextContentAdapter(),
@@ -157,7 +126,7 @@ public class PrefPageDatabaseGeneral extends AbstractPrefPage implements IWorkbe
                     }));
             logsDebugLocation.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
-            Label tipLabel = UIUtils.createLabel(groupLogs, CoreMessages.pref_page_ui_general_label_options_take_effect_after_restart);
+            Label tipLabel = UIUtils.createLabel(groupLogs, "These options will take effect after DBeaver restart");
             tipLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING, GridData.VERTICAL_ALIGN_BEGINNING, false, false , 2, 1));
         }
 
@@ -165,12 +134,12 @@ public class PrefPageDatabaseGeneral extends AbstractPrefPage implements IWorkbe
             // Link to secure storage config
             new PreferenceLinkArea(composite, SWT.NONE,
                 PrefPageEntityEditor.PAGE_ID,
-                "<a>''{0}''</a> "+CoreMessages.pref_page_ui_general_label_settings,
+                "<a>''{0}''</a> settings",
                 (IWorkbenchPreferenceContainer) getContainer(), null); //$NON-NLS-1$
 
             new PreferenceLinkArea(composite, SWT.NONE,
                 PrefPageSQLEditor.PAGE_ID,
-                "<a>''{0}''</a>"+CoreMessages.pref_page_ui_general_label_settings,
+                "<a>''{0}''</a> settings",
                 (IWorkbenchPreferenceContainer) getContainer(), null); //$NON-NLS-1$
 
         }
@@ -189,7 +158,7 @@ public class PrefPageDatabaseGeneral extends AbstractPrefPage implements IWorkbe
         longOperationsCheck.setSelection(store.getBoolean(DBeaverPreferences.AGENT_LONG_OPERATION_NOTIFY));
         longOperationsTimeout.setSelection(store.getInt(DBeaverPreferences.AGENT_LONG_OPERATION_TIMEOUT));
 
-        //defaultResourceEncoding.setText(store.getString(DBeaverPreferences.DEFAULT_RESOURCE_ENCODING));
+        defaultResourceEncoding.setText(store.getString(DBeaverPreferences.DEFAULT_RESOURCE_ENCODING));
 
         logsDebugEnabled.setSelection(store.getBoolean(DBeaverPreferences.LOGS_DEBUG_ENABLED));
         logsDebugLocation.setText(store.getString(DBeaverPreferences.LOGS_DEBUG_LOCATION));
@@ -205,37 +174,12 @@ public class PrefPageDatabaseGeneral extends AbstractPrefPage implements IWorkbe
         store.setValue(DBeaverPreferences.AGENT_LONG_OPERATION_NOTIFY, longOperationsCheck.getSelection());
         store.setValue(DBeaverPreferences.AGENT_LONG_OPERATION_TIMEOUT, longOperationsTimeout.getSelection());
 
-        //store.setValue(DBeaverPreferences.DEFAULT_RESOURCE_ENCODING, defaultResourceEncoding.getText());
+        store.setValue(DBeaverPreferences.DEFAULT_RESOURCE_ENCODING, defaultResourceEncoding.getText());
 
         store.setValue(DBeaverPreferences.LOGS_DEBUG_ENABLED, logsDebugEnabled.getSelection());
         store.setValue(DBeaverPreferences.LOGS_DEBUG_LOCATION, logsDebugLocation.getText());
 
         PrefUtils.savePreferenceStore(store);
-
-        if (workspaceLanguage.getSelectionIndex() >= 0) {
-            PlatformLanguageDescriptor language = PlatformLanguageRegistry.getInstance().getLanguages().get(workspaceLanguage.getSelectionIndex());
-            try {
-                DBPPlatformLanguage curLanguage = DBeaverCore.getInstance().getLanguage();
-                if (curLanguage != language) {
-                    DBeaverCore.getInstance().setPlatformLanguage(language);
-
-                    if (UIUtils.confirmAction(
-                        getShell(),
-                        "Restart " + GeneralUtils.getProductName(),
-                        "You need to restart " + GeneralUtils.getProductName() + " to perform actual language change.\nDo you want to restart?"))
-                    {
-                        DBeaverUI.asyncExec(new Runnable() {
-                            @Override
-                            public void run() {
-                                PlatformUI.getWorkbench().restart();
-                            }
-                        });
-                    }
-                }
-            } catch (DBException e) {
-                DBeaverUI.getInstance().showError("Change language", "Can't switch language to " + language, e);
-            }
-        }
 
         return true;
     }

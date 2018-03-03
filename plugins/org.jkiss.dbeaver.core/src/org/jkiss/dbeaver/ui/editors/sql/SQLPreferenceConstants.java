@@ -26,11 +26,8 @@ public class SQLPreferenceConstants
     public static final String PROPOSAL_INSERT_CASE                    = "SQLEditor.ContentAssistant.insert.case";
     public static final String HIDE_DUPLICATE_PROPOSALS                = "SQLEditor.ContentAssistant.hide.duplicates";
     public static final String PROPOSAL_SHORT_NAME                     = "SQLEditor.ContentAssistant.proposals.short.name";
-    public static final String PROPOSAL_ALWAYS_FQ                      = "SQLEditor.ContentAssistant.proposals.long.name";
     public static final String INSERT_SPACE_AFTER_PROPOSALS            = "SQLEditor.ContentAssistant.insert.space.after.proposal";
     public static final String USE_GLOBAL_ASSISTANT                    = "SQLEditor.ContentAssistant.use.global.search";
-
-    public static final String FOLDING_ENABLED                         = "SQLEditor.Folding.enabled";
 
     // Auto-save
     public static final String AUTO_SAVE_ON_CLOSE                      = "SQLEditor.autoSaveOnClose";
@@ -48,7 +45,6 @@ public class SQLPreferenceConstants
     public final static String MATCHING_BRACKETS_COLOR                  = "SQLEditor.matchingBracketsColor";
 
     public final static String RESET_CURSOR_ON_EXECUTE                  = "SQLEditor.resetCursorOnExecute";
-    public final static String MAXIMIZE_EDITOR_ON_SCRIPT_EXECUTE        = "SQLEditor.maxEditorOnScriptExecute";
 
     public static final int PROPOSAL_CASE_DEFAULT                       = 0;
     public static final int PROPOSAL_CASE_UPPER                         = 1;
@@ -62,6 +58,4 @@ public class SQLPreferenceConstants
 
     public final static String RESULT_SET_CLOSE_ON_ERROR                = "SQLEditor.resultSet.closeOnError";
     public final static String RESULT_SET_ORIENTATION                   = "SQLEditor.resultSet.orientation";
-    public static final String RESULTS_PANEL_RATIO                      = "SQLEditor.resultSet.ratio";
-
 }

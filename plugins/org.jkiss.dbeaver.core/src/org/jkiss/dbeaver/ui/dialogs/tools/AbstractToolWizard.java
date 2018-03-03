@@ -34,7 +34,6 @@ import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.connection.DBPClientHome;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.navigator.DBNDatabaseNode;
-import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
 import org.jkiss.dbeaver.model.struct.DBSObject;
@@ -48,7 +47,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -59,21 +57,16 @@ public abstract class AbstractToolWizard<BASE_OBJECT extends DBSObject, PROCESS_
 
     private static final Log log = Log.getLog(AbstractToolWizard.class);
 
-    private final String PROP_NAME_EXTRA_ARGS = "tools.wizard." + getClass().getSimpleName() + ".extraArgs";
-
     private final List<BASE_OBJECT> databaseObjects;
     private DBPClientHome clientHome;
     private DBPDataSourceContainer dataSourceContainer;
     private DBPConnectionConfiguration connectionInfo;
     private String toolUserName;
     private String toolUserPassword;
-    private String extraCommandArgs;
-    protected boolean clientHomeRequired = true;
 
     protected String task;
     protected final DatabaseWizardPageLog logPage;
     private boolean finished;
-    protected boolean transferFinished;
 
     protected AbstractToolWizard(Collection<BASE_OBJECT> databaseObjects, String task)
     {
@@ -91,30 +84,12 @@ public abstract class AbstractToolWizard<BASE_OBJECT extends DBSObject, PROCESS_
             dataSourceContainer = object.getDataSource().getContainer();
             connectionInfo = dataSourceContainer.getActualConnectionConfiguration();
         }
-
-        final DBPPreferenceStore store = DBeaverCore.getGlobalPreferenceStore();
-
-        extraCommandArgs = store.getString(PROP_NAME_EXTRA_ARGS);
     }
 
     @Override
     public boolean canFinish()
     {
-        if (!super.canFinish()) {
-            return false;
-        }
-        if (isSingleTimeWizard()) {
-            return !finished;
-        }
-        // [#2917] Finish button is always enabled (!finished && super.canFinish())
-        return true;
-    }
-
-    /**
-     * @return true if this wizard can be executed only once
-     */
-    protected boolean isSingleTimeWizard() {
-        return false;
+        return !finished && super.canFinish();
     }
 
     public List<BASE_OBJECT> getDatabaseObjects()
@@ -152,20 +127,6 @@ public abstract class AbstractToolWizard<BASE_OBJECT extends DBSObject, PROCESS_
         this.toolUserPassword = toolUserPassword;
     }
 
-    public String getExtraCommandArgs() {
-        return extraCommandArgs;
-    }
-
-    public void setExtraCommandArgs(String extraCommandArgs) {
-        this.extraCommandArgs = extraCommandArgs;
-    }
-
-    protected void addExtraCommandArgs(List<String> cmd) {
-        if (!CommonUtils.isEmptyTrimmed(extraCommandArgs)) {
-            Collections.addAll(cmd, extraCommandArgs.split(" "));
-        }
-    }
-
     public abstract DBPClientHome findServerHome(String clientHomeId);
 
     public abstract Collection<PROCESS_ARG> getRunInfo();
@@ -177,27 +138,21 @@ public abstract class AbstractToolWizard<BASE_OBJECT extends DBSObject, PROCESS_
 
         WizardPage currentPage = (WizardPage) getStartingPage();
 
-        if (clientHomeRequired) {
-            String clientHomeId = connectionInfo.getClientHomeId();
-            if (clientHomeId == null) {
-                currentPage.setErrorMessage(CoreMessages.tools_wizard_message_no_client_home);
-                getContainer().updateMessage();
-                return;
-            }
-            clientHome = findServerHome(clientHomeId);//MySQLDataSourceProvider.getServerHome(clientHomeId);
-            if (clientHome == null) {
-                currentPage.setErrorMessage(NLS.bind(CoreMessages.tools_wizard_message_client_home_not_found, clientHomeId));
-                getContainer().updateMessage();
-            }
+        String clientHomeId = connectionInfo.getClientHomeId();
+        if (clientHomeId == null) {
+            currentPage.setErrorMessage(CoreMessages.tools_wizard_message_no_client_home);
+            getContainer().updateMessage();
+            return;
+        }
+        clientHome = findServerHome(clientHomeId);//MySQLDataSourceProvider.getServerHome(clientHomeId);
+        if (clientHome == null) {
+            currentPage.setErrorMessage(NLS.bind(CoreMessages.tools_wizard_message_client_home_not_found, clientHomeId));
+            getContainer().updateMessage();
         }
     }
 
     @Override
     public boolean performFinish() {
-        // Save settings
-        final DBPPreferenceStore store = DBeaverCore.getGlobalPreferenceStore();
-        store.setValue(PROP_NAME_EXTRA_ARGS, extraCommandArgs);
-
         if (getContainer().getCurrentPage() != logPage) {
             getContainer().showPage(logPage);
         }
@@ -460,7 +415,6 @@ public abstract class AbstractToolWizard<BASE_OBJECT extends DBSObject, PROCESS_
             }
             finally {
                 monitor.done();
-                transferFinished = true;
             }
         }
     }
@@ -501,13 +455,7 @@ public abstract class AbstractToolWizard<BASE_OBJECT extends DBSObject, PROCESS_
                 logPage.appendLog(e.getMessage() + "\n");
             }
             finally {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    log.error(e);
-                }
                 monitor.done();
-                transferFinished = true;
             }
         }
     }

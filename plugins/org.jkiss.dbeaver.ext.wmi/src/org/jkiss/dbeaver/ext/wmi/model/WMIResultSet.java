@@ -249,13 +249,13 @@ public class WMIResultSet implements DBCResultSet, DBCResultSetMetaData, DBCEnti
         }
 
         @Override
-        public Integer getScale()
+        public int getScale()
         {
             return 0;
         }
 
         @Override
-        public Integer getPrecision()
+        public int getPrecision()
         {
             return 0;
         }

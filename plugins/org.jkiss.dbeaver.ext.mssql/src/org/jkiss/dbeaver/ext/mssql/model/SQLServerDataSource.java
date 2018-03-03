@@ -18,64 +18,19 @@ package org.jkiss.dbeaver.ext.mssql.model;
 
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.ext.generic.model.GenericDataSource;
-import org.jkiss.dbeaver.ext.mssql.SQLServerConstants;
-import org.jkiss.dbeaver.ext.mssql.SQLServerUtils;
-import org.jkiss.dbeaver.model.DBConstants;
+import org.jkiss.dbeaver.ext.generic.model.meta.GenericMetaModel;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
-import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
-import org.jkiss.utils.CommonUtils;
+import org.jkiss.dbeaver.model.struct.DBSDataType;
+
+import java.util.Locale;
 
 public class SQLServerDataSource extends GenericDataSource {
 
-    public SQLServerDataSource(DBRProgressMonitor monitor, DBPDataSourceContainer container)
-        throws DBException
-    {
-        this(monitor, container,
-            new SQLServerMetaModel(
-                container.getDriver().getSampleURL().contains(":sqlserver")
-            ));
-    }
-
-    SQLServerDataSource(DBRProgressMonitor monitor, DBPDataSourceContainer container, SQLServerMetaModel metaModel)
+    public SQLServerDataSource(DBRProgressMonitor monitor, DBPDataSourceContainer container, GenericMetaModel metaModel)
         throws DBException
     {
         super(monitor, container, metaModel, new SQLServerDialect());
     }
 
-    @Override
-    public Object getDataSourceFeature(String featureId) {
-        if (DBConstants.FEATURE_LIMIT_AFFECTS_DML.equals(featureId)) {
-            return true;
-        }
-        return super.getDataSourceFeature(featureId);
-    }
-
-    //////////////////////////////////////////////////////////
-    // Databases
-
-    protected boolean isShowAllSchemas() {
-        return CommonUtils.toBoolean(getContainer().getConnectionConfiguration().getProviderProperty(SQLServerConstants.PROP_SHOW_ALL_SCHEMAS));
-    }
-
-    //////////////////////////////////////////////////////////
-    // Windows authentication
-
-    @Override
-    protected String getConnectionUserName(DBPConnectionConfiguration connectionInfo) {
-        if (SQLServerUtils.isWindowsAuth(connectionInfo)) {
-            return "";
-        } else {
-            return super.getConnectionUserName(connectionInfo);
-        }
-    }
-
-    @Override
-    protected String getConnectionUserPassword(DBPConnectionConfiguration connectionInfo) {
-        if (SQLServerUtils.isWindowsAuth(connectionInfo)) {
-            return "";
-        } else {
-            return super.getConnectionUserPassword(connectionInfo);
-        }
-    }
 }

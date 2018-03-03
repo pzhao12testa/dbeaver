@@ -192,11 +192,7 @@ public class MigrateConnectionWizard extends Wizard
         public void createControl(Composite parent)
         {
             Composite placeholder = UIUtils.createPlaceholder(parent, 1);
-            driverTreeControl = new DriverTreeControl(
-                placeholder,
-                this,
-                DataSourceProviderRegistry.getInstance().getEnabledDataSourceProviders(),
-                true);
+            driverTreeControl = new DriverTreeControl(placeholder, this, DataSourceProviderRegistry.getInstance().getDataSourceProviders(), true);
             GridData gd = new GridData(GridData.FILL_BOTH);
             gd.heightHint = 200;
             driverTreeControl.setLayoutData(gd);

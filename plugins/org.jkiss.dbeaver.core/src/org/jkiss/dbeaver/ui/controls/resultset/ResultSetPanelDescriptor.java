@@ -23,6 +23,7 @@ import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBPImage;
 import org.jkiss.dbeaver.registry.AbstractContextDescriptor;
 import org.jkiss.dbeaver.registry.RegistryConstants;
+import org.jkiss.dbeaver.registry.driver.DriverDescriptor;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.ArrayList;
@@ -102,7 +103,8 @@ public class ResultSetPanelDescriptor extends AbstractContextDescriptor {
             if (dataSource == null) {
                 return false;
             }
-            if (!supportedDataSources.contains(dataSource.getContainer().getDriver().getProviderId())) {
+            DriverDescriptor driver = (DriverDescriptor) dataSource.getContainer().getDriver();
+            if (!supportedDataSources.contains(driver.getProviderDescriptor().getId())) {
                 return false;
             }
         }

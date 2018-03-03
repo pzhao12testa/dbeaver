@@ -21,9 +21,11 @@ import org.eclipse.jface.viewers.IFilter;
 import org.eclipse.swt.widgets.Composite;
 import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.model.app.DBPProjectListener;
+import org.jkiss.dbeaver.model.navigator.DBNDatabaseItem;
 import org.jkiss.dbeaver.model.navigator.DBNEmptyNode;
 import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.model.navigator.DBNProject;
+import org.jkiss.dbeaver.model.struct.DBSEntity;
 import org.jkiss.dbeaver.ui.IHelpContextIds;
 import org.jkiss.dbeaver.ui.UIUtils;
 
@@ -38,7 +40,13 @@ public class DatabaseNavigatorView extends NavigatorViewBase implements DBPProje
 
     @Override
     protected IFilter getNavigatorFilter() {
-        return new DatabaseNavigatorTreeFilter();
+        return new IFilter() {
+            @Override
+            public boolean select(Object element) {
+                return !(element instanceof DBNDatabaseItem) ||
+                       !(((DBNDatabaseItem) element).getObject() instanceof DBSEntity);
+            }
+        };
     }
 
     @Override
@@ -67,5 +75,4 @@ public class DatabaseNavigatorView extends NavigatorViewBase implements DBPProje
     {
         getNavigatorTree().getViewer().setInput(new DatabaseNavigatorContent(getRootNode()));
     }
-
 }

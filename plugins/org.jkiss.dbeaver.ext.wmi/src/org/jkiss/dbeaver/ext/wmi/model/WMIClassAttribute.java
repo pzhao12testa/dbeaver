@@ -64,13 +64,13 @@ public class WMIClassAttribute extends WMIClassElement<WMIObjectAttribute> imple
     }
 
     @Override
-    public Integer getScale()
+    public int getScale()
     {
         return 0;
     }
 
     @Override
-    public Integer getPrecision()
+    public int getPrecision()
     {
         return 0;
     }

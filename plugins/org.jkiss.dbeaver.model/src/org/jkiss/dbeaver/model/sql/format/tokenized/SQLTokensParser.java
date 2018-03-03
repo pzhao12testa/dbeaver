@@ -95,9 +95,6 @@ class SQLTokensParser {
         case '!': // greater than operator
         case '~': // greater than operator
         case '`': // apos
-        case '[': // bracket open
-        case ']': // bracket close
-        case '#': //
             return true;
         default:
             return false;
@@ -131,7 +128,7 @@ class SQLTokensParser {
             return new FormatterToken(TokenType.SYMBOL, ";", start_pos);
         } else if (isDigit(fChar)) {
             StringBuilder s = new StringBuilder();
-            while (isDigit(fChar) || fChar == '.' || fChar == 'e' || fChar == 'E') {
+            while (isDigit(fChar) || fChar == '.') {
                 // if (ch == '.') type = Token.REAL;
                 s.append(fChar);
                 fPos++;
@@ -217,31 +214,21 @@ class SQLTokensParser {
         } else {
             if (fChar == '\'' || isQuoteChar(fChar)) {
                 fPos++;
-                char endQuoteChar = fChar;
-                // Close quote char may differ
-                if (quoteStrings != null) {
-                    for (String[] quoteString : quoteStrings) {
-                        if (quoteString[0].charAt(0) == endQuoteChar) {
-                            endQuoteChar = quoteString[1].charAt(0);
-                            break;
-                        }
-                    }
-                }
-
+                char quoteChar = fChar;
                 StringBuilder s = new StringBuilder();
-                s.append(fChar);
+                s.append(quoteChar);
                 for (;;) {
                     fChar = fBefore.charAt(fPos);
                     s.append(fChar);
                     fPos++;
                     char fNextChar = fPos >= fBefore.length() - 1 ? 0 : fBefore.charAt(fPos);
-                    if (fChar == endQuoteChar && fNextChar == endQuoteChar) {
+                    if (fChar == quoteChar && fNextChar == quoteChar) {
                         // Escaped quote
                         s.append(fChar);
                         fPos++;
                         continue;
                     }
-                    if (fChar == endQuoteChar) {
+                    if (fChar == quoteChar) {
                         return new FormatterToken(TokenType.VALUE, s.toString(), start_pos);
                     }
                 }

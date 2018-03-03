@@ -34,7 +34,6 @@ import org.jkiss.utils.IOUtils;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -71,7 +70,6 @@ public class SSHTunnelImpl implements DBWTunnel {
         String sshAuthType = properties.get(SSHConstants.PROP_AUTH_TYPE);
         String sshHost = properties.get(SSHConstants.PROP_HOST);
         String sshPort = properties.get(SSHConstants.PROP_PORT);
-        String sshLocalPort = properties.get(SSHConstants.PROP_LOCAL_PORT);
         String sshUser = configuration.getUserName();
         String aliveInterval = properties.get(SSHConstants.PROP_ALIVE_INTERVAL);
         String connectTimeoutString = properties.get(SSHConstants.PROP_CONNECT_TIMEOUT);
@@ -126,16 +124,6 @@ public class SSHTunnelImpl implements DBWTunnel {
         int localPort = savedLocalPort;
         if (platform != null) {
             localPort = findFreePort(platform);
-        }
-        if (!CommonUtils.isEmpty(sshLocalPort)) {
-            try {
-                int forceLocalPort = Integer.parseInt(sshLocalPort);
-                if (forceLocalPort > 0) {
-                    localPort = forceLocalPort;
-                }
-            } catch (NumberFormatException e) {
-                log.warn("Bad local port specified", e);
-            }
         }
         try {
             if (jsch == null) {
@@ -228,30 +216,7 @@ public class SSHTunnelImpl implements DBWTunnel {
         if (sshAuthType != null) {
             authType = SSHConstants.AuthType.valueOf(sshAuthType);
         }
-        if (authType == SSHConstants.AuthType.PUBLIC_KEY) {
-            // Check whether this key is encrypted
-            String privKeyPath = configuration.getProperties().get(SSHConstants.PROP_KEY_PATH);
-            if (privKeyPath != null) {
-                // Determine whether public key is encrypted
-                try {
-                    JSch testSch = new JSch();
-                    testSch.addIdentity(privKeyPath);
-                    IdentityRepository ir = testSch.getIdentityRepository();
-                    List<Identity> identities = ir.getIdentities();
-                    for (Identity identity : identities) {
-                        if (identity.isEncrypted()) {
-                            return AuthCredentials.PASSWORD;
-                        }
-                    }
-                } catch (JSchException e) {
-                    // Something went wrong
-                    log.debug("Can't check private key encryption: " + e.getMessage());
-                }
-            }
-
-            return AuthCredentials.NONE;
-        }
-        return AuthCredentials.CREDENTIALS;
+        return authType == SSHConstants.AuthType.PUBLIC_KEY ? AuthCredentials.PASSWORD : AuthCredentials.CREDENTIALS;
     }
 
     @Override

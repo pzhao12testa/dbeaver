@@ -26,7 +26,6 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-/workspace/
 
 *.iml
 /idea/

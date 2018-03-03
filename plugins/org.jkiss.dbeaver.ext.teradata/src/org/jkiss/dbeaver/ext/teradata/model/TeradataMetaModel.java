@@ -37,7 +37,6 @@ import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSTypedObject;
 
 import java.sql.SQLException;
-import java.util.Map;
 
 /**
  * TeradataMetaModel
@@ -49,7 +48,7 @@ public class TeradataMetaModel extends GenericMetaModel implements DBDValueHandl
     }
 
     @Override
-    public String getTableDDL(DBRProgressMonitor monitor, GenericTable sourceObject, Map<String, Object> options) throws DBException {
+    public String getTableDDL(DBRProgressMonitor monitor, GenericTable sourceObject) throws DBException {
         GenericDataSource dataSource = sourceObject.getDataSource();
         boolean isView = sourceObject.isView();
         try (JDBCSession session = DBUtils.openMetaSession(monitor, dataSource, "Read Teradata object DDL")) {
@@ -68,8 +67,8 @@ public class TeradataMetaModel extends GenericMetaModel implements DBDValueHandl
         }
     }
 
-    public String getViewDDL(DBRProgressMonitor monitor, GenericTable sourceObject, Map<String, Object> options) throws DBException {
-        return getTableDDL(monitor, sourceObject, options);
+    public String getViewDDL(DBRProgressMonitor monitor, GenericTable sourceObject) throws DBException {
+        return getTableDDL(monitor, sourceObject);
     }
 
     @Override

@@ -26,15 +26,13 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBIconComposite;
+import org.jkiss.dbeaver.model.app.DBPPlatform;
 import org.jkiss.dbeaver.model.DBPImage;
 import org.jkiss.dbeaver.model.DBUtils;
-import org.jkiss.dbeaver.model.app.DBPPlatform;
 import org.jkiss.dbeaver.model.navigator.meta.DBXTreeFolder;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.DBSObjectState;
-import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
-import org.jkiss.dbeaver.utils.RuntimeUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
@@ -73,7 +71,6 @@ public class DBNModel implements IResourceChangeListener {
     private DBNRoot root;
     private final List<INavigatorListener> listeners = new ArrayList<>();
     private transient INavigatorListener[] listenersCopy = null;
-    private final transient List<DBNEvent> eventCache = new ArrayList<>();
     private final Map<DBSObject, Object> nodeMap = new HashMap<>();
 
     public DBNModel(DBPPlatform platform) {
@@ -97,8 +94,6 @@ public class DBNModel implements IResourceChangeListener {
         }
 
         platform.getWorkspace().addResourceChangeListener(this);
-
-        new EventProcessingJob().schedule();
     }
 
     public void dispose()
@@ -412,8 +407,6 @@ public class DBNModel implements IResourceChangeListener {
                         }
                     }
                 }
-                // It is actual parent and there are no folders
-                return node;
             }
         }
         // Not found
@@ -516,9 +509,29 @@ public class DBNModel implements IResourceChangeListener {
         if (platform.isShuttingDown()) {
             return;
         }
-        synchronized (eventCache) {
-            eventCache.add(event);
+        final INavigatorListener[] listenersCopy;
+        synchronized (this.listeners) {
+            if (listeners.isEmpty()) {
+                return;
+            }
+            listenersCopy = this.listenersCopy;
         }
+        if (listenersCopy.length == 0) {
+            return;
+        }
+        // Notify listeners in detached job
+        new Job("Notify node '" + event.getNode().getName() + "' changes") {
+            {
+                setSystem(true);
+            }
+            @Override
+            protected IStatus run(IProgressMonitor monitor) {
+                for (INavigatorListener listener :  listenersCopy) {
+                    listener.nodeChanged(event);
+                }
+                return Status.OK_STATUS;
+            }
+        }.schedule();
     }
 
     @Override
@@ -605,51 +618,4 @@ public class DBNModel implements IResourceChangeListener {
             projectNode.getDatabases();
         }
     }
-
-    private class EventProcessingJob extends Job {
-
-        EventProcessingJob() {
-            super("Navigator notifier");
-            setSystem(true);
-        }
-
-        @Override
-        protected IStatus run(IProgressMonitor monitor) {
-            while (!platform.isShuttingDown()) {
-                RuntimeUtils.pause(100);
-                final INavigatorListener[] realListeners;
-                synchronized (listeners) {
-                    realListeners = listenersCopy;
-                }
-                if (realListeners == null || realListeners.length == 0) {
-                    continue;
-                }
-                final DBNEvent[] realEvents;
-                synchronized (eventCache) {
-                    if (eventCache.isEmpty()) {
-                        continue;
-                    }
-                    realEvents = eventCache.toArray(new DBNEvent[eventCache.size()]);
-                    eventCache.clear();
-                }
-
-                try {
-                    DBUserInterface.getInstance().executeInUI(new Runnable() {
-                        @Override
-                        public void run() {
-                            for (int i = 0; i < realEvents.length; i++) {
-                                for (INavigatorListener listener : listenersCopy) {
-                                    listener.nodeChanged(realEvents[i]);
-                                }
-                            }
-                        }
-                    });
-                } catch (Exception e) {
-                    log.error(e);
-                }
-            }
-            return Status.OK_STATUS;
-        }
-    }
-
 }

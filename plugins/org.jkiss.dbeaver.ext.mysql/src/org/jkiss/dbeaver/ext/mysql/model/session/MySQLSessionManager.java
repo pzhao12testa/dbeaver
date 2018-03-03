@@ -24,7 +24,6 @@ import org.jkiss.dbeaver.model.exec.DBCSession;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCSession;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCPreparedStatement;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCResultSet;
-import org.jkiss.utils.CommonUtils;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -38,8 +37,6 @@ import java.util.Map;
 public class MySQLSessionManager implements DBAServerSessionManager<MySQLSession> {
 
     public static final String PROP_KILL_QUERY = "killQuery";
-
-    public static final String OPTION_HIDE_SLEEPING = "hideSleeping";
 
     private final MySQLDataSource dataSource;
 
@@ -57,17 +54,12 @@ public class MySQLSessionManager implements DBAServerSessionManager<MySQLSession
     @Override
     public Collection<MySQLSession> getSessions(DBCSession session, Map<String, Object> options) throws DBException
     {
-        boolean hideSleeping = CommonUtils.getOption(options, OPTION_HIDE_SLEEPING);
         try {
             try (JDBCPreparedStatement dbStat = ((JDBCSession) session).prepareStatement("SHOW FULL PROCESSLIST")) {
                 try (JDBCResultSet dbResult = dbStat.executeQuery()) {
                     List<MySQLSession> sessions = new ArrayList<>();
                     while (dbResult.next()) {
-                        MySQLSession sessionInfo = new MySQLSession(dbResult);
-                        if (hideSleeping && "Sleep".equals(sessionInfo.getCommand())) {
-                            continue;
-                        }
-                        sessions.add(sessionInfo);
+                        sessions.add(new MySQLSession(dbResult));
                     }
                     return sessions;
                 }

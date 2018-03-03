@@ -1,6 +1,7 @@
 /*
  * DBeaver - Universal Database Manager
  * Copyright (C) 2010-2017 Serge Rider (serge@jkiss.org)
+ * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +19,10 @@ package org.jkiss.dbeaver.ext.postgresql.tools;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.IWizardPage;
-import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.IWorkbench;
 import org.jkiss.dbeaver.core.DBeaverCore;
-import org.jkiss.dbeaver.ext.postgresql.PostgreMessages;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreSchema;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreTableBase;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
@@ -39,7 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 class PostgreBackupWizard extends PostgreBackupRestoreWizard<PostgreDatabaseBackupInfo> implements IExportWizard {
@@ -54,7 +52,7 @@ class PostgreBackupWizard extends PostgreBackupRestoreWizard<PostgreDatabaseBack
     private PostgreBackupWizardPageSettings settingsPage;
 
     public PostgreBackupWizard(Collection<DBSObject> objects) {
-        super(objects, PostgreMessages.wizard_backup_title);
+        super(objects, "Database backup");
 
         final DBPPreferenceStore store = DBeaverCore.getGlobalPreferenceStore();
         this.outputFilePattern = store.getString("Postgre.export.outputFilePattern");
@@ -98,8 +96,8 @@ class PostgreBackupWizard extends PostgreBackupRestoreWizard<PostgreDatabaseBack
 	public void onSuccess(long workTime) {
         UIUtils.showMessageBox(
             getShell(),
-            PostgreMessages.wizard_backup_msgbox_success_title,
-            NLS.bind(PostgreMessages.wizard_backup_msgbox_success_description, CommonUtils.truncateString(getObjectsName(), 255)),
+            "Database export",
+            "Export of '" + CommonUtils.truncateString(getObjectsName(), 255) + "' completed",
             SWT.ICON_INFORMATION);
         UIUtils.launchProgram(outputFolder.getAbsolutePath());
 	}
@@ -165,27 +163,21 @@ class PostgreBackupWizard extends PostgreBackupRestoreWizard<PostgreDatabaseBack
     {
         super.startProcessHandler(monitor, arg, processBuilder, process);
 
-        String outFileName = GeneralUtils.replaceVariables(outputFilePattern, name -> {
-            switch (name) {
-                case VARIABLE_DATABASE:
-                    return arg.getDatabase().getName();
-                case VARIABLE_HOST:
-                    return arg.getDatabase().getDataSource().getContainer().getConnectionConfiguration().getHostName();
-                case VARIABLE_TABLE:
-                    final Iterator<PostgreTableBase> iterator = arg.getTables() == null ? null : arg.getTables().iterator();
-                    if (iterator != null && iterator.hasNext()) {
-                        return iterator.next().getName();
-                    } else {
-                        return "null";
-                    }
-                case VARIABLE_TIMESTAMP:
-                    return RuntimeUtils.getCurrentTimeStamp();
-                case VARIABLE_DATE:
-                    return RuntimeUtils.getCurrentDate();
-                default:
-                    System.getProperty(name);
+        String outFileName = GeneralUtils.replaceVariables(outputFilePattern, new GeneralUtils.IVariableResolver() {
+            @Override
+            public String get(String name) {
+                switch (name) {
+                    case VARIABLE_DATABASE:
+                        return arg.getDatabase().getName();
+                    case VARIABLE_HOST:
+                        return arg.getDatabase().getDataSource().getContainer().getConnectionConfiguration().getHostName();
+                    case VARIABLE_TIMESTAMP:
+                        return RuntimeUtils.getCurrentTimeStamp();
+                    default:
+                        System.getProperty(name);
+                }
+                return null;
             }
-            return null;
         });
 
         File outFile = new File(outputFolder, outFileName);

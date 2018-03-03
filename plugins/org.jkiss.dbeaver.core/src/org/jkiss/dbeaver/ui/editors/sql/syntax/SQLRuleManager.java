@@ -36,7 +36,10 @@ import org.jkiss.dbeaver.model.sql.SQLSyntaxManager;
 import org.jkiss.dbeaver.registry.sql.SQLCommandHandlerDescriptor;
 import org.jkiss.dbeaver.registry.sql.SQLCommandsRegistry;
 import org.jkiss.dbeaver.ui.editors.EditorUtils;
-import org.jkiss.dbeaver.ui.editors.sql.syntax.rules.*;
+import org.jkiss.dbeaver.ui.editors.sql.syntax.rules.LineCommentRule;
+import org.jkiss.dbeaver.ui.editors.sql.syntax.rules.SQLDelimiterRule;
+import org.jkiss.dbeaver.ui.editors.sql.syntax.rules.SQLDelimiterSetRule;
+import org.jkiss.dbeaver.ui.editors.sql.syntax.rules.SQLParameterRule;
 import org.jkiss.dbeaver.ui.editors.sql.syntax.tokens.*;
 import org.jkiss.dbeaver.ui.editors.text.TextWhiteSpaceDetector;
 import org.jkiss.utils.ArrayUtils;
@@ -83,11 +86,9 @@ public class SQLRuleManager extends RuleBasedScanner {
 
     public void endEval() {
         this.evalMode = false;
-        if (fRules != null) {
-            for (IRule rule : fRules) {
-                if (rule instanceof SQLDelimiterRule) {
-                    ((SQLDelimiterRule) rule).changeDelimiter(null);
-                }
+        for (IRule rule : fRules) {
+            if (rule instanceof SQLDelimiterRule) {
+                ((SQLDelimiterRule) rule).changeDelimiter(null);
             }
         }
     }
@@ -155,8 +156,6 @@ public class SQLRuleManager extends RuleBasedScanner {
             new TextAttribute(getColor(SQLConstants.CONFIG_COLOR_DELIMITER, SWT.COLOR_RED), null, SWT.NORMAL));
         final SQLParameterToken parameterToken = new SQLParameterToken(
             new TextAttribute(getColor(SQLConstants.CONFIG_COLOR_PARAMETER, SWT.COLOR_DARK_BLUE), null, SWT.BOLD));
-        final SQLVariableToken variableToken = new SQLVariableToken(
-            new TextAttribute(getColor(SQLConstants.CONFIG_COLOR_PARAMETER, SWT.COLOR_DARK_BLUE), null, SWT.BOLD));
         final IToken otherToken = new Token(
             new TextAttribute(getColor(SQLConstants.CONFIG_COLOR_TEXT), null, SWT.NORMAL));
         final SQLBlockHeaderToken blockHeaderToken = new SQLBlockHeaderToken(
@@ -199,33 +198,28 @@ public class SQLRuleManager extends RuleBasedScanner {
                 rules.add(new EndOfLineRule(commandPrefix + controlCommand.getId(), controlToken)); //$NON-NLS-1$
             }
         }
-        {
-            if (!minimalRules && syntaxManager.isVariablesEnabled()) {
-                // Variable rule
-                rules.add(new SQLVariableRule(parameterToken));
-            }
-        }
 
         {
             // Add rules for delimited identifiers and string literals.
-            char escapeChar = syntaxManager.getEscapeChar();
+            //char escapeChar = syntaxManager.getEscapeChar();
             String[][] quoteStrings = syntaxManager.getQuoteStrings();
             boolean hasSingleQuoteRule = false, hasDoubleQuoteRule = false;
             if (!ArrayUtils.isEmpty(quoteStrings)) {
                 for (int i = 0; i < quoteStrings.length; i++) {
-                    rules.add(new SingleLineRule(quoteStrings[i][0], quoteStrings[i][1], quotedToken, escapeChar));
+                    rules.add(new SingleLineRule(quoteStrings[i][0], quoteStrings[i][1], quotedToken, (char) 0));
                     if (quoteStrings[i][0].equals(SQLConstants.STR_QUOTE_SINGLE) && quoteStrings[i][0].equals(quoteStrings[i][1])) {
                         hasSingleQuoteRule = true;
                     } else if (quoteStrings[i][1].equals(SQLConstants.STR_QUOTE_DOUBLE) && quoteStrings[i][0].equals(quoteStrings[i][1])) {
                         hasDoubleQuoteRule = true;
                     }
+
                 }
             }
             if (!hasSingleQuoteRule) {
-                rules.add(new MultiLineRule(SQLConstants.STR_QUOTE_SINGLE, SQLConstants.STR_QUOTE_SINGLE, stringToken, escapeChar));
+                rules.add(new MultiLineRule(SQLConstants.STR_QUOTE_SINGLE, SQLConstants.STR_QUOTE_SINGLE, stringToken, (char) 0));
             }
             if (!hasDoubleQuoteRule) {
-                rules.add(new MultiLineRule(SQLConstants.STR_QUOTE_DOUBLE, SQLConstants.STR_QUOTE_DOUBLE, quotedToken, escapeChar));
+                rules.add(new MultiLineRule(SQLConstants.STR_QUOTE_DOUBLE, SQLConstants.STR_QUOTE_DOUBLE, quotedToken, (char) 0));
             }
         }
 
@@ -257,28 +251,13 @@ public class SQLRuleManager extends RuleBasedScanner {
             }
         }
 
-        final String blockToggleString = dialect.getBlockToggleString();
-        if (!CommonUtils.isEmpty(blockToggleString)) {
-            int divPos = blockToggleString.indexOf(SQLConstants.KEYWORD_PATTERN_CHARS);
-            if (divPos != -1) {
-                String prefix = blockToggleString.substring(0, divPos);
-                String postfix = blockToggleString.substring(divPos + SQLConstants.KEYWORD_PATTERN_CHARS.length());
-                WordPatternRule blockToggleRule = new WordPatternRule(new SQLWordDetector(), prefix, postfix, blockToggleToken);
-                rules.add(blockToggleRule);
-            } else {
-                WordRule blockToggleRule = new WordRule(getWordOrSymbolDetector(blockToggleString), Token.UNDEFINED, true);
-                blockToggleRule.addWord(blockToggleString, blockToggleToken);
-                rules.add(blockToggleRule);
-            }
-        }
-
         if (!minimalRules) {
             if (ruleProvider != null) {
                 ruleProvider.extendRules(rules, SQLRuleProvider.RulePosition.KEYWORDS);
             }
 
             // Add word rule for keywords, types, and constants.
-            SQLWordRule wordRule = new SQLWordRule(delimRule, otherToken);
+            WordRule wordRule = new WordRule(new SQLWordDetector(), otherToken, true);
             for (String reservedWord : dialect.getReservedWords()) {
                 wordRule.addWord(reservedWord, keywordToken);
             }
@@ -305,6 +284,21 @@ public class SQLRuleManager extends RuleBasedScanner {
                 }
             }
             rules.add(wordRule);
+        }
+
+        final String blockToggleString = dialect.getBlockToggleString();
+        if (!CommonUtils.isEmpty(blockToggleString)) {
+            int divPos = blockToggleString.indexOf(SQLConstants.KEYWORD_PATTERN_CHARS);
+            if (divPos != -1) {
+                String prefix = blockToggleString.substring(0, divPos);
+                String postfix = blockToggleString.substring(divPos + SQLConstants.KEYWORD_PATTERN_CHARS.length());
+                WordPatternRule blockToggleRule = new WordPatternRule(new SQLWordDetector(), prefix, postfix, blockToggleToken);
+                rules.add(blockToggleRule);
+            } else {
+                WordRule blockToggleRule = new WordRule(getWordOrSymbolDetector(blockToggleString), Token.UNDEFINED, true);
+                blockToggleRule.addWord(blockToggleString, blockToggleToken);
+                rules.add(blockToggleRule);
+            }
         }
 
         if (!minimalRules) {

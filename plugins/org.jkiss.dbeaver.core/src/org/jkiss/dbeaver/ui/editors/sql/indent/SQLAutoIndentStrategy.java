@@ -125,8 +125,7 @@ public class SQLAutoIndentStrategy extends DefaultIndentLineAutoEditStrategy {
         boolean inString = true;
         for (int i = quoteStart + 1; i < quoteEnd; i++) {
             final char ch = sourceCode.charAt(i);
-            char escapeChar = '\\';
-            if (prevChar == escapeChar && inString) {
+            if (prevChar == '\\' && inString) {
                 switch (ch) {
                     case 'n': result.append("\n"); break;
                     case 'r': result.append("\r"); break;
@@ -138,10 +137,9 @@ public class SQLAutoIndentStrategy extends DefaultIndentLineAutoEditStrategy {
                     case '"':
                         inString = !inString;
                         break;
+                    case '\\':
+                        break;
                     default:
-                        if (ch == escapeChar) {
-                            break;
-                        }
                         if (inString) {
                             result.append(ch);
                         } else if (ch == '\n' && result.length() > 0) {

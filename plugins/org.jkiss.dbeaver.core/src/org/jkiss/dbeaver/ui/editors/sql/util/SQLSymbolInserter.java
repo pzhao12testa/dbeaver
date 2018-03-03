@@ -391,12 +391,12 @@ public class SQLSymbolInserter implements VerifyKeyListener, ILinkedModeListener
         }
     }
 
-    public char getEscapeCharacter(char character)
+    public static char getEscapeCharacter(char character)
     {
         switch (character) {
             case '"':
             case '\'':
-                return editor.getSyntaxManager().getEscapeChar();
+                return '\\';
             default:
                 return 0;
         }

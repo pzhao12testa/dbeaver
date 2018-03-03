@@ -29,7 +29,6 @@ import org.jkiss.dbeaver.ext.exasol.model.ExasolConnection;
 import org.jkiss.dbeaver.ext.exasol.model.ExasolDataSource;
 import org.jkiss.dbeaver.ext.exasol.tools.ExasolUtils;
 import org.jkiss.dbeaver.ext.exasol.ui.ExasolConnectionDialog;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEObjectRenamer;
@@ -46,7 +45,7 @@ public class ExasolConnectionManager
         extends SQLObjectEditor<ExasolConnection, ExasolDataSource> implements DBEObjectRenamer<ExasolConnection> {
     
     @Override
-    public long getMakerOptions(DBPDataSource dataSource)
+    public long getMakerOptions()
     {
         return FEATURE_SAVE_IMMEDIATELY;
     }
@@ -93,7 +92,7 @@ public class ExasolConnectionManager
     
     @Override
     protected void addObjectCreateActions(List<DBEPersistAction> actions,
-                                          ObjectCreateCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolConnection, ExasolDataSource>.ObjectCreateCommand command)
     {
         final ExasolConnection con = command.getObject();
         
@@ -124,7 +123,7 @@ public class ExasolConnectionManager
     
     @Override
     protected void addObjectRenameActions(List<DBEPersistAction> actions,
-                                          ObjectRenameCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolConnection, ExasolDataSource>.ObjectRenameCommand command)
     {
         ExasolConnection obj = command.getObject();
         actions.add(
@@ -137,7 +136,7 @@ public class ExasolConnectionManager
     
     @Override
     protected void addObjectDeleteActions(List<DBEPersistAction> actions,
-                                          ObjectDeleteCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolConnection, ExasolDataSource>.ObjectDeleteCommand command)
     {
         final ExasolConnection con = command.getObject();
         actions.add(
@@ -147,7 +146,7 @@ public class ExasolConnectionManager
     
     @Override
     protected void addObjectModifyActions(List<DBEPersistAction> actionList,
-                                          ObjectChangeCommand command, Map<String, Object> options)
+            SQLObjectEditor<ExasolConnection, ExasolDataSource>.ObjectChangeCommand command)
     {
         ExasolConnection con = command.getObject();
         

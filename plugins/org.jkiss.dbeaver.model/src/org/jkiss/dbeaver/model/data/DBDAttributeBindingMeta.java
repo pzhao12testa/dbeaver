@@ -126,12 +126,12 @@ public class DBDAttributeBindingMeta extends DBDAttributeBinding {
     }
 
     @Override
-    public Integer getScale() {
+    public int getScale() {
         return getAttribute().getScale();
     }
 
     @Override
-    public Integer getPrecision() {
+    public int getPrecision() {
         return getAttribute().getPrecision();
     }
 
@@ -203,9 +203,9 @@ public class DBDAttributeBindingMeta extends DBDAttributeBinding {
      * Sets entity attribute
      * @return true if attribute type differs from meta attribute type.
      */
-    public boolean setEntityAttribute(@Nullable DBSEntityAttribute entityAttribute, boolean updateHandler) {
+    public boolean setEntityAttribute(@Nullable DBSEntityAttribute entityAttribute) {
         this.entityAttribute = entityAttribute;
-        if (updateHandler && entityAttribute != null && !haveEqualsTypes(metaAttribute, entityAttribute)) {
+        if (entityAttribute != null && !haveEqualsTypes(metaAttribute, entityAttribute)) {
             valueHandler = DBUtils.findValueHandler(getDataSource(), entityAttribute);
             return true;
         }
@@ -214,7 +214,6 @@ public class DBDAttributeBindingMeta extends DBDAttributeBinding {
 
     public static boolean haveEqualsTypes(DBSTypedObject object1, DBSTypedObject object2) {
         return object1.getTypeID() == object2.getTypeID() &&
-            object1.getDataKind() == object2.getDataKind() &&
             object1.getTypeName().equalsIgnoreCase(object2.getTypeName());
     }
 

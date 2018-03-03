@@ -38,7 +38,7 @@ public class OracleObjectValidateAction extends OracleObjectPersistAction {
     }
 
     @Override
-    public void afterExecute(DBCSession session, Throwable error) throws DBCException {
+    public void handleExecute(DBCSession session, Throwable error) throws DBCException {
         if (error != null) {
             return;
         }

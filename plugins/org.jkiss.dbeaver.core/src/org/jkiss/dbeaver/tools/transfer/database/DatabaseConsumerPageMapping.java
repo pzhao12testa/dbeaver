@@ -56,7 +56,6 @@ import org.jkiss.dbeaver.ui.dialogs.ActiveWizardPage;
 import org.jkiss.dbeaver.ui.dialogs.BrowseObjectDialog;
 import org.jkiss.dbeaver.ui.dialogs.EnterNameDialog;
 import org.jkiss.dbeaver.ui.dialogs.sql.ViewSQLDialog;
-import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.ArrayList;
@@ -450,7 +449,6 @@ public class DatabaseConsumerPageMapping extends ActiveWizardPage<DataTransferWi
                     mappingTypes.add(mapping.getMappingType().name());
                 }
                 return new CustomComboBoxCellEditor(
-                    mappingViewer,
                     mappingViewer.getTree(),
                     mappingTypes.toArray(new String[mappingTypes.size()]),
                     SWT.DROP_DOWN | SWT.READ_ONLY);
@@ -539,7 +537,6 @@ public class DatabaseConsumerPageMapping extends ActiveWizardPage<DataTransferWi
         }
         items.add(DatabaseMappingAttribute.TARGET_NAME_SKIP);
         CustomComboBoxCellEditor editor = new CustomComboBoxCellEditor(
-            mappingViewer,
             mappingViewer.getTree(),
             items.toArray(new String[items.size()]),
             SWT.DROP_DOWN | (allowsCreate ? SWT.NONE : SWT.READ_ONLY));
@@ -604,7 +601,7 @@ public class DatabaseConsumerPageMapping extends ActiveWizardPage<DataTransferWi
             }
             DBNNode selectedNode = rootNode;
             if (mapping.getTarget() != null) {
-                selectedNode = NavigatorUtils.getNodeByObject(mapping.getTarget());
+                selectedNode = DBeaverCore.getInstance().getNavigatorModel().getNodeByObject(mapping.getTarget());
             }
             DBNNode node = BrowseObjectDialog.selectObject(
                 getShell(),

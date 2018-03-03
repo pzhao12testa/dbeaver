@@ -24,7 +24,7 @@ import org.jkiss.dbeaver.model.admin.locks.DBAServerLock;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.meta.Property;
 
-public class PostgreLock implements DBAServerLock {
+public class PostgreLock implements DBAServerLock<Integer>{
 
      private int    wait_pid;
      private String wait_user;
@@ -33,8 +33,8 @@ public class PostgreLock implements DBAServerLock {
      private String wait_statement;
      private String statement_in;
      
-     private DBAServerLock hold = null;
-     private List<DBAServerLock> waiters = new ArrayList<>(0);
+     DBAServerLock<Integer> hold = null;
+     List<DBAServerLock<Integer>> waiters = new ArrayList<>(0); 
      
      public PostgreLock(ResultSet dbResult) {
     	 
@@ -84,12 +84,12 @@ public class PostgreLock implements DBAServerLock {
 	}
 
 	@Override
-	public DBAServerLock getHoldBy() {
+	public DBAServerLock<Integer> getHoldBy() {
 		
 		return hold;
 	}
 
-	public DBAServerLock getHold() {
+	public DBAServerLock<Integer> getHold() {
 		return hold;
 	}
 
@@ -100,7 +100,7 @@ public class PostgreLock implements DBAServerLock {
 
 
 	@Override
-	public List<DBAServerLock> waitThis() {
+	public List<DBAServerLock<Integer>> waitThis() {		
 		return this.waiters;
 	}
 
@@ -111,8 +111,8 @@ public class PostgreLock implements DBAServerLock {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void setHoldBy(DBAServerLock lock) {
-		this.hold = lock;
+	public void setHoldBy(DBAServerLock<?> lock) {
+		this.hold = (DBAServerLock<Integer>) lock;		
 	}
 
 	@Override

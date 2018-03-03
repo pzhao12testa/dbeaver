@@ -54,7 +54,6 @@ public abstract class LightGrid extends Canvas {
 
     protected static final int Event_ChangeSort = 1000;
     protected static final int Event_NavigateLink = 1001;
-    protected static final int Event_FilterColumn = 1002;
 
     /**
      * Horizontal scrolling increment, in pixels.
@@ -220,11 +219,9 @@ public abstract class LightGrid extends Canvas {
 
     private boolean hoveringOnHeader = false;
     private boolean hoveringOnColumnSorter = false;
-    private boolean hoveringOnColumnFilter = false;
     private boolean hoveringOnLink = false;
 
     private GridColumn columnBeingSorted;
-    private GridColumn columnBeingFiltered;
     private boolean hoveringOnColumnResizer = false;
     private GridColumn columnBeingResized;
     private boolean resizingColumn = false;
@@ -819,7 +816,7 @@ public abstract class LightGrid extends Canvas {
             if (point.x >= x2 && point.x < x2 + column.getWidth()) {
                 for (GridColumn parent = column.getParent(); parent != null; parent = parent.getParent()) {
                     Point parentLoc = getOrigin(parent, -1);
-                    if (point.y >= parentLoc.y && point.y <= parentLoc.y + parent.getHeaderHeight(false, false)) {
+                    if (point.y >= parentLoc.y && point.y <= parentLoc.y + parent.getHeaderHeight(false)) {
                         column = parent;
                         break;
                     }
@@ -1788,7 +1785,7 @@ public abstract class LightGrid extends Canvas {
         // Column header height
         int colHeaderHeight = 0;
         for (GridColumn column : topColumns) {
-            colHeaderHeight = Math.max(column.getHeaderHeight(true, true), colHeaderHeight);
+            colHeaderHeight = Math.max(column.getHeaderHeight(true), colHeaderHeight);
         }
         headerHeight = colHeaderHeight;
 
@@ -1923,7 +1920,7 @@ public abstract class LightGrid extends Canvas {
      */
     private void handleHoverOnColumnHeader(int x, int y)
     {
-        boolean overSorter = false, overResizer = false, overFilter = false;
+        boolean overSorter = false, overResizer = false;
         hoveringOnHeader = false;
         if (y <= headerHeight) {
             int x2 = 0;
@@ -1936,16 +1933,12 @@ public abstract class LightGrid extends Canvas {
 
             if (x < x2) {
                 int ltSort = getContentProvider().getSortOrder(null);
-                if (ltSort != SWT.NONE 
-                		&& x > x2 - GridColumnRenderer.SORT_WIDTH - GridColumnRenderer.ARROW_MARGIN 
-                		&& x < x2 - GridColumnRenderer.ARROW_MARGIN 
-                		&& y > GridColumnRenderer.TOP_MARGIN)
+                if (ltSort != SWT.NONE && x > x2 - GridColumnRenderer.SORT_WIDTH - GridColumnRenderer.ARROW_MARGIN && x < x2 - GridColumnRenderer.ARROW_MARGIN &&
+                    y > GridColumnRenderer.TOP_MARGIN)
                 {
                     columnBeingSorted = null;
                     overSorter = true;
                 }
-
-                
             } else {
                 if (x > getRowHeaderWidth()) {
                     for (GridColumn column : columns) {
@@ -1956,13 +1949,6 @@ public abstract class LightGrid extends Canvas {
                                 columnBeingSorted = column;
                                 break;
                             }
-                            
-                            if(column.isOverFilterButton(x - x2, y)) {
-                            	columnBeingFiltered = column;
-                            	overFilter = true;
-                            	break;
-                            }
-                            
                             x2 += column.getWidth();
                             if (x2 >= (x - COLUMN_RESIZER_THRESHOLD) && x2 <= (x + COLUMN_RESIZER_THRESHOLD)) {
                                 overResizer = true;
@@ -1996,18 +1982,6 @@ public abstract class LightGrid extends Canvas {
             }
             hoveringOnColumnSorter = overSorter;
         }
-        
-        if(overFilter != hoveringOnColumnFilter) {
-        	if(overFilter) 
-        		setCursor(sortCursor);        	
-        	else if(!overSorter) {
-        		columnBeingFiltered = null;
-        		setCursor(null);
-        	}
-        		
-        	hoveringOnColumnFilter = overFilter;
-        }
-        
         if (overResizer != hoveringOnColumnResizer) {
             if (overResizer) {
                 setCursor(getDisplay().getSystemCursor(SWT.CURSOR_SIZEWE));
@@ -2020,7 +1994,7 @@ public abstract class LightGrid extends Canvas {
             hoveringOnColumnResizer = overResizer;
         }
 
-        if (hoveringOnHeader && !overSorter && !overResizer && !overFilter) {
+        if (hoveringOnHeader && !overSorter && !overResizer) {
             hoveringOnHeaderDragArea = true;
         } else {
             hoveringOnHeaderDragArea = false;
@@ -2230,7 +2204,7 @@ public abstract class LightGrid extends Canvas {
             if (x > clientArea.width)
                 break;
 
-            int columnHeight = column.getHeaderHeight(false, false);
+            int columnHeight = column.getHeaderHeight(false);
             y = 0;
             if (x + column.getWidth() >= 0) {
                 paintColumnsHeader(gc, column, x, y, columnHeight, 0);
@@ -2790,14 +2764,6 @@ public abstract class LightGrid extends Canvas {
                 return;
             }
         }
-        
-        if(hoveringOnColumnFilter) {
-        	handleHoverOnColumnHeader(e.x, e.y);
-        	 if (hoveringOnColumnFilter) {
-                 return;
-             }
-        }
-        
         if (hoveringOnColumnResizer) {
             if (e.button == 1) {
                 resizingColumn = true;
@@ -2812,8 +2778,8 @@ public abstract class LightGrid extends Canvas {
 
         if (isListening(SWT.DragDetect)) {
 
-            if (hoveringOnHeaderDragArea && hoveringColumn != null) {
-                if (e.button == 1 && hoveringColumn.isOverIcon(e.x, e.y)) {
+            if (hoveringOnHeaderDragArea) {
+                if (e.button == 1 && (e.stateMask & SWT.MOD3) != 0) {
                     if (dragDetect(e)) {
                         // Drag and drop started
                         headerColumnDragStarted = true;
@@ -2876,10 +2842,6 @@ public abstract class LightGrid extends Canvas {
             } else if (e.button == 1 || (e.button == 3 && col != null && !isSelectedCell)) {
                 if (col != null) {
                     selectionEvent = updateCellSelection(new GridPos(col.getIndex(), row), e.stateMask, false, true, EventSource.MOUSE);
-                    // Trigger selection event always!
-                    // It makes sense if grid content was changed but selection remains the same
-                    // If user clicks on the same selected cell value - selection event will trigger value redraw in panels
-                    selectionEvent = new Event();
                     cellSelectedOnLastMouseDown = (getCellSelectionCount() > 0);
 
                     if (e.stateMask != SWT.MOD2) {
@@ -3039,7 +3001,7 @@ public abstract class LightGrid extends Canvas {
      */
     private void onMouseUp(MouseEvent e)
     {
-        if (focusColumn != null && focusItem >= 0) {
+        if (cellSelectedOnLastMouseDown && focusColumn != null && focusItem >= 0) {
             if (e.button == 1 && cellRenderer.isOverLink(focusColumn, focusItem, e.x, e.y)) {
                 // Navigate link
                 Event event = new Event();
@@ -3068,23 +3030,6 @@ public abstract class LightGrid extends Canvas {
                 }
             }
         }
-
-        if (hoveringOnColumnFilter) {
-            handleHoverOnColumnHeader(e.x, e.y);
-            if (hoveringOnColumnFilter) {
-                if (e.button == 1) {
-                    Event event = new Event();
-                    event.x = e.x;
-                    event.y = e.y;
-                    event.data = columnBeingFiltered == null ? null : columnBeingFiltered.getElement();
-                    event.stateMask = e.stateMask;
-                    notifyListeners(Event_FilterColumn, event);
-                    return;
-                }
-
-            }
-        }
-
         if (resizingColumn) {
             resizingColumn = false;
             handleHoverOnColumnHeader(e.x, e.y); // resets cursor if
@@ -3620,7 +3565,7 @@ public abstract class LightGrid extends Canvas {
             }
         } else if (columnHeadersVisible && column.getParent() != null) {
             for (GridColumn parent = column.getParent(); parent != null; parent = parent.getParent()) {
-                y += parent.getHeaderHeight(false, false);
+                y += parent.getHeaderHeight(false);
             }
         }
 
@@ -4327,7 +4272,7 @@ public abstract class LightGrid extends Canvas {
 
     private void addDragAndDropSupport()
     {
-        final int operations = DND.DROP_MOVE;//DND.DROP_COPY | DND.DROP_MOVE | DND.DROP_LINK | DND.DROP_DEFAULT;
+        int operations = DND.DROP_MOVE;
 
         final DragSource source = new DragSource(this, operations);
         source.setTransfer(new Transfer[] { GridColumnTransfer.INSTANCE });
@@ -4370,7 +4315,7 @@ public abstract class LightGrid extends Canvas {
             }
         });
 
-        DropTarget dropTarget = new DropTarget(this, operations);
+        DropTarget dropTarget = new DropTarget(this, DND.DROP_MOVE);
         dropTarget.setTransfer(new Transfer[] {GridColumnTransfer.INSTANCE});
         dropTarget.addDropListener(new DropTargetListener() {
             @Override
@@ -4414,11 +4359,7 @@ public abstract class LightGrid extends Canvas {
 
             private void handleDragEvent(DropTargetEvent event)
             {
-                if (!isDropSupported(event)) {
-                    event.detail = DND.DROP_NONE;
-                } else {
-                    event.detail = DND.DROP_MOVE;
-                }
+                event.detail = isDropSupported(event) ? DND.DROP_MOVE : DND.DROP_NONE;
                 event.feedback = DND.FEEDBACK_SELECT;
             }
 

@@ -58,7 +58,6 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
 
     enum QueryType {
         TABLE,
-        JOIN,
         COLUMN
     }
 
@@ -122,8 +121,6 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
                         ("(".equals(wordDetector.getPrevDelimiter()) || ",".equals(wordDetector.getPrevDelimiter())))
                     {
                         request.queryType = QueryType.COLUMN;
-                    } else if (SQLConstants.KEYWORD_JOIN.equals(prevKeyWord)) {
-                        request.queryType = QueryType.JOIN;
                     } else {
                         request.queryType = QueryType.TABLE;
                     }
@@ -293,7 +290,7 @@ public class SQLCompletionProcessor implements IContentAssistProcessor
     {
         boolean useKeystrokes = editor.getActivePreferenceStore().getBoolean(SQLPreferenceConstants.ENABLE_KEYSTROKE_ACTIVATION);
         return useKeystrokes ?
-            ".abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$".toCharArray() :
+            ".abcdefghijklmnopqrstuvwxyz_$".toCharArray() :
             new char[] {'.', };
     }
 

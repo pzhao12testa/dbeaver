@@ -22,11 +22,9 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.*;
 import org.jkiss.dbeaver.core.CoreMessages;
-import org.jkiss.dbeaver.registry.DataSourceDescriptor;
 import org.jkiss.dbeaver.ui.IHelpContextIds;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.CustomTableEditor;
-import org.jkiss.dbeaver.ui.controls.VariablesHintLabel;
 import org.jkiss.dbeaver.ui.dialogs.EditTextDialog;
 import org.jkiss.dbeaver.ui.dialogs.HelpEnabledDialog;
 
@@ -54,11 +52,11 @@ public class EditBootstrapQueriesDialog extends HelpEnabledDialog {
 
     @Override
     protected Control createDialogArea(Composite parent) {
-        getShell().setText(CoreMessages.dialog_connection_edit_wizard_general_bootstrap_query_title);
+        getShell().setText("Bootstrap SQL queries");
 
         Composite composite = (Composite) super.createDialogArea(parent);
 
-        Group group = UIUtils.createControlGroup(composite, CoreMessages.dialog_connection_edit_wizard_general_bootstrap_query_sql_label, 2, GridData.FILL_BOTH, 0);
+        Group group = UIUtils.createControlGroup(composite, "SQL Queries", 2, GridData.FILL_BOTH, 0);
 
         queriesTable = new Table(group, SWT.SINGLE | SWT.FULL_SELECTION | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
         final GridData gd = new GridData(GridData.FILL_BOTH);
@@ -95,7 +93,7 @@ public class EditBootstrapQueriesDialog extends HelpEnabledDialog {
             @Override
             public void widgetSelected(SelectionEvent e) {
                 tableEditor.closeEditor();
-                String sql = EditTextDialog.editText(getShell(), CoreMessages.dialog_connection_edit_wizard_general_bootstrap_query_sql_title, "");
+                String sql = EditTextDialog.editText(getShell(), "Enter SQL", "");
                 if (sql != null) {
                     TableItem newItem = new TableItem(queriesTable, SWT.LEFT);
                     newItem.setText(sql);
@@ -129,8 +127,7 @@ public class EditBootstrapQueriesDialog extends HelpEnabledDialog {
             }
         });
 
-        ignoreErrorButton = UIUtils.createCheckbox(composite, CoreMessages.dialog_connection_edit_wizard_general_bootstrap_query_ignore_error_lable, ignoreErrors);
-        new VariablesHintLabel(composite, DataSourceDescriptor.CONNECT_VARIABLES);
+        ignoreErrorButton = UIUtils.createCheckbox(composite, "Ignore SQL errors", ignoreErrors);
 
         UIUtils.packColumns(queriesTable, true);
 

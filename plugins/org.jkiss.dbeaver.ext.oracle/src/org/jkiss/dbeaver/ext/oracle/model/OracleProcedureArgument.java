@@ -191,14 +191,14 @@ public class OracleProcedureArgument implements DBSProcedureParameter, DBSTypedO
 
     @Override
     @Property(viewable = true, order = 40)
-    public Integer getScale()
+    public int getScale()
     {
         return dataScale;
     }
 
     @Override
     @Property(viewable = true, order = 50)
-    public Integer getPrecision()
+    public int getPrecision()
     {
         return dataPrecision;
     }

@@ -17,7 +17,6 @@
 package org.jkiss.dbeaver.ext.postgresql;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
@@ -25,11 +24,9 @@ import org.osgi.framework.BundleContext;
  * The activator class controls the plug-in life cycle
  */
 public class PostgreActivator extends AbstractUIPlugin {
-    
-    public static final String IMG_PG_SQL = "IMG_PG_SQL"; //$NON-NLS-1$
 
 	// The plug-in ID
-	public static final String PLUGIN_ID = "org.jkiss.dbeaver.ext.postgresql"; //$NON-NLS-1$
+	public static final String PLUGIN_ID = "org.jkiss.dbeaver.ext.postgresql";
 
 	// The shared instance
 	private static PostgreActivator plugin;
@@ -55,12 +52,5 @@ public class PostgreActivator extends AbstractUIPlugin {
 
 	public static ImageDescriptor getImageDescriptor(String path) {
 		return imageDescriptorFromPlugin(PLUGIN_ID, path);
-	}
-	
-	@Override
-	protected void initializeImageRegistry(ImageRegistry reg)
-	{
-	    super.initializeImageRegistry(reg);
-	    reg.put(IMG_PG_SQL, getImageDescriptor("$nl$/icons/postgresql_icon.png")); //$NON-NLS-1$
 	}
 }

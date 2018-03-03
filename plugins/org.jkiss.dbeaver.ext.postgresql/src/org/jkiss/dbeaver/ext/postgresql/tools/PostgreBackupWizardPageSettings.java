@@ -1,6 +1,7 @@
 /*
  * DBeaver - Universal Database Manager
  * Copyright (C) 2010-2017 Serge Rider (serge@jkiss.org)
+ * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +23,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.*;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.*;
-import org.jkiss.dbeaver.ext.postgresql.PostgreMessages;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
-import org.jkiss.dbeaver.ui.dialogs.tools.AbstractImportExportWizard;
-import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.io.File;
@@ -42,11 +40,11 @@ class PostgreBackupWizardPageSettings extends PostgreWizardPageSettings<PostgreB
     private Combo encodingCombo;
     private Button useInsertsCheck;
 
-    PostgreBackupWizardPageSettings(PostgreBackupWizard wizard)
+    protected PostgreBackupWizardPageSettings(PostgreBackupWizard wizard)
     {
-        super(wizard, PostgreMessages.wizard_backup_page_setting_title_setting);
-        setTitle(PostgreMessages.wizard_backup_page_setting_title);
-        setDescription(PostgreMessages.wizard_backup_page_setting_description);
+        super(wizard, "Settings");
+        setTitle("Backup settings");
+        setDescription("Database backup settings");
     }
 
     @Override
@@ -67,8 +65,8 @@ class PostgreBackupWizardPageSettings extends PostgreWizardPageSettings<PostgreB
             }
         };
 
-        Group formatGroup = UIUtils.createControlGroup(composite, PostgreMessages.wizard_backup_page_setting_group_setting, 2, GridData.FILL_HORIZONTAL, 0);
-        formatCombo = UIUtils.createLabelCombo(formatGroup, PostgreMessages.wizard_backup_page_setting_label_format, SWT.DROP_DOWN | SWT.READ_ONLY);
+        Group formatGroup = UIUtils.createControlGroup(composite, "Settings", 2, GridData.FILL_HORIZONTAL, 0);
+        formatCombo = UIUtils.createLabelCombo(formatGroup, "Format", SWT.DROP_DOWN | SWT.READ_ONLY);
         formatCombo.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
         for (PostgreBackupWizard.ExportFormat format : PostgreBackupWizard.ExportFormat.values()) {
             formatCombo.add(format.getTitle());
@@ -76,7 +74,7 @@ class PostgreBackupWizardPageSettings extends PostgreWizardPageSettings<PostgreB
         formatCombo.select(wizard.format.ordinal());
         formatCombo.addSelectionListener(changeListener);
 
-        compressCombo = UIUtils.createLabelCombo(formatGroup, PostgreMessages.wizard_backup_page_setting_label_compression, SWT.DROP_DOWN | SWT.READ_ONLY);
+        compressCombo = UIUtils.createLabelCombo(formatGroup, "Compression", SWT.DROP_DOWN | SWT.READ_ONLY);
         compressCombo.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
         compressCombo.add("");
         for (int i = 0; i <= 9; i++) {
@@ -85,42 +83,38 @@ class PostgreBackupWizardPageSettings extends PostgreWizardPageSettings<PostgreB
         compressCombo.select(0);
         compressCombo.addSelectionListener(changeListener);
 
-        UIUtils.createControlLabel(formatGroup, PostgreMessages.wizard_backup_page_setting_label_encoding);
+        UIUtils.createControlLabel(formatGroup, "Encoding");
         encodingCombo = UIUtils.createEncodingCombo(formatGroup, null);
         encodingCombo.addSelectionListener(changeListener);
 
         useInsertsCheck = UIUtils.createCheckbox(formatGroup,
-        	PostgreMessages.wizard_backup_page_setting_checkbox_use_insert,
-            null,
-            false,
-            2
+            "Use SQL INSERT instead of COPY for rows",
+            false
         );
         useInsertsCheck.addSelectionListener(changeListener);
 
-        Group outputGroup = UIUtils.createControlGroup(composite, PostgreMessages.wizard_backup_page_setting_group_output, 2, GridData.FILL_HORIZONTAL, 0);
-        outputFolderText = DialogUtils.createOutputFolderChooser(outputGroup, PostgreMessages.wizard_backup_page_setting_label_output_folder, e -> updateState());
-        outputFileText = UIUtils.createLabelText(outputGroup, PostgreMessages.wizard_backup_page_setting_label_file_name_pattern, wizard.getOutputFilePattern());
-        UIUtils.setContentProposalToolTip(outputFileText, PostgreMessages.wizard_backup_page_setting_label_file_name_pattern_output,
-            AbstractImportExportWizard.VARIABLE_HOST,
-            AbstractImportExportWizard.VARIABLE_DATABASE,
-            AbstractImportExportWizard.VARIABLE_TABLE,
-            AbstractImportExportWizard.VARIABLE_DATE,
-            AbstractImportExportWizard.VARIABLE_TIMESTAMP);
+        Group outputGroup = UIUtils.createControlGroup(composite, "Output", 2, GridData.FILL_HORIZONTAL, 0);
+        outputFolderText = DialogUtils.createOutputFolderChooser(outputGroup, "Output folder", new ModifyListener() {
+            @Override
+            public void modifyText(ModifyEvent e) {
+                updateState();
+            }
+        });
+        outputFileText = UIUtils.createLabelText(outputGroup, "File name pattern", wizard.getOutputFilePattern());
+        UIUtils.setContentProposalToolTip(outputFileText, "Output file name pattern", "host", "database", "table", "timestamp");
         UIUtils.installContentProposal(
             outputFileText,
             new TextContentAdapter(),
-            new SimpleContentProposalProvider(new String[]{
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_HOST),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_DATABASE),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_TABLE),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_DATE),
-                GeneralUtils.variablePattern(AbstractImportExportWizard.VARIABLE_TIMESTAMP),
-            }));
-        outputFileText.addModifyListener(e -> wizard.setOutputFilePattern(outputFileText.getText()));
+            new SimpleContentProposalProvider(new String[]{"${host}", "${database}", "${table}", "${timestamp}"}));
+        outputFileText.addModifyListener(new ModifyListener() {
+            @Override
+            public void modifyText(ModifyEvent e) {
+                wizard.setOutputFilePattern(outputFileText.getText());
+            }
+        });
         if (wizard.getOutputFolder() != null) {
             outputFolderText.setText(wizard.getOutputFolder().getAbsolutePath());
         }
-        createExtraArgsInput(outputGroup);
 
         createSecurityGroup(composite);
 

@@ -41,11 +41,6 @@ public abstract class AbstractScriptExecuteWizard<BASE_OBJECT extends DBSObject,
         this.inputFile = null;
 	}
 
-    @Override
-    protected boolean isSingleTimeWizard() {
-        return false;
-    }
-
     public File getInputFile()
     {
         return inputFile;

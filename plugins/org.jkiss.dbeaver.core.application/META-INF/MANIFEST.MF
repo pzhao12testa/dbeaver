@@ -1,30 +1,31 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Vendor: %Bundle-Vendor
-Bundle-Name: %Bundle-Name
+Bundle-Name: DBeaver Standalone
 Bundle-SymbolicName: org.jkiss.dbeaver.core.application;singleton:=true
-Bundle-Version: 4.3.5
-Bundle-Release-Date: 20180219
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Export-Package: org.jkiss.dbeaver.core.application
+Bundle-Version: 4.1.3
+Bundle-Release-Date: 20170821
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ClassPath: .
-Require-Bundle: org.eclipse.osgi,
+Bundle-Vendor: JKISS
+Bundle-Localization: plugin
+Require-Bundle: org.jkiss.dbeaver.core,
+ org.jkiss.dbeaver.model,
+ org.eclipse.osgi,
  org.eclipse.equinox.app,
- org.eclipse.core.runtime,
  org.eclipse.swt,
+ org.eclipse.ui.workbench,
+ org.eclipse.core.runtime,
  org.eclipse.jface,
+ org.eclipse.core.resources,
+ org.eclipse.ui.workbench.texteditor,
+ org.eclipse.help,
+ org.eclipse.core.filesystem,
+ org.eclipse.ui.editors,
+ org.eclipse.ui.ide,
+ org.eclipse.ui.ide.application,
  org.eclipse.e4.ui.css.core,
  org.eclipse.e4.ui.css.swt,
  org.eclipse.e4.ui.workbench.renderers.swt,
- org.eclipse.ui.editors,
- org.eclipse.ui.workbench,
- org.eclipse.ui.workbench.texteditor,
- org.eclipse.help,
- org.eclipse.core.resources,
- org.eclipse.ui.ide,
- org.eclipse.ui.ide.application,
- org.apache.commons.cli,
  org.w3c.css.sac,
- org.jkiss.dbeaver.model,
- org.jkiss.dbeaver.core,
- org.jkiss.dbeaver.ui
+ org.apache.commons.cli
+Export-Package: org.jkiss.dbeaver.core.application

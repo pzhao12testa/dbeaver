@@ -704,10 +704,10 @@ public class JDBCUtils {
             return;
         }
         for (String inc : CommonUtils.safeCollection(filter.getInclude())) {
-            statement.setString(paramIndex++, SQLUtils.makeSQLLike(inc));
+            statement.setString(paramIndex++, inc);
         }
         for (String exc : CommonUtils.safeCollection(filter.getExclude())) {
-            statement.setString(paramIndex++, SQLUtils.makeSQLLike(exc));
+            statement.setString(paramIndex++, exc);
         }
     }
 
@@ -773,11 +773,11 @@ public class JDBCUtils {
         }
     }
 
-    public static String generateTableDDL(@NotNull DBRProgressMonitor monitor, @NotNull JDBCTable table, Map<String, Object> options, boolean addComments) throws DBException {
+    public static String generateTableDDL(@NotNull DBRProgressMonitor monitor, @NotNull JDBCTable table, boolean addComments) throws DBException {
         final DBERegistry editorsRegistry = table.getDataSource().getContainer().getPlatform().getEditorsRegistry();
         final SQLObjectEditor entityEditor = editorsRegistry.getObjectManager(table.getClass(), SQLObjectEditor.class);
         if (entityEditor instanceof SQLTableManager) {
-            DBEPersistAction[] ddlActions = ((SQLTableManager) entityEditor).getTableDDL(monitor, table, options);
+            DBEPersistAction[] ddlActions = ((SQLTableManager) entityEditor).getTableDDL(monitor, table);
             return SQLUtils.generateScript(table.getDataSource(), ddlActions, addComments);
         }
         log.debug("Table editor not found for " + table.getClass().getName());

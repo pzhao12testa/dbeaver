@@ -21,7 +21,6 @@ import org.eclipse.jface.dialogs.IDialogPage;
 import org.eclipse.jface.preference.PreferencePage;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.IWizardPage;
-import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPropertyPage;
@@ -48,7 +47,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Edit connection dialog
+ * This is a sample new wizard.
  */
 
 public class EditConnectionWizard extends ConnectionWizard
@@ -63,7 +62,6 @@ public class EditConnectionWizard extends ConnectionWizard
     private ConnectionPageNetwork pageNetwork;
     private EditShellCommandsDialogPage pageEvents;
     private List<WizardPrefPage> prefPages = new ArrayList<>();
-    private PrefPageConnections pageClientSettings;
 
     /**
      * Constructor for SampleNewWizard.
@@ -137,35 +135,23 @@ public class EditConnectionWizard extends ConnectionWizard
             pageSettings.addSubPage(pageEvents);
         }
 
-        if (!embedded && pageSettings != null) {
-            pageClientSettings = new PrefPageConnections();
-            pageSettings.addSubPage(
-                createPreferencePage(pageClientSettings, CoreMessages.dialog_connection_edit_wizard_connections, CoreMessages.dialog_connection_edit_wizard_connections_description));
-        }
-
-        addPreferencePage(new PrefPageMetaData(), CoreMessages.dialog_connection_edit_wizard_metadata,  CoreMessages.dialog_connection_edit_wizard_metadata_description);
-        addPreferencePage(new PrefPageErrorHandle(), CoreMessages.pref_page_error_handle_name,  CoreMessages.pref_page_error_handle_description);
-        WizardPrefPage rsPage = addPreferencePage(new PrefPageResultSetMain(), CoreMessages.dialog_connection_edit_wizard_resultset,  CoreMessages.dialog_connection_edit_wizard_resultset_description);
-        rsPage.addSubPage(new PrefPageResultSetEditors(), CoreMessages.dialog_connection_edit_wizard_editors, CoreMessages.dialog_connection_edit_wizard_editors_description);
-        rsPage.addSubPage(new PrefPageDataFormat(), CoreMessages.dialog_connection_edit_wizard_data_format, CoreMessages.dialog_connection_edit_wizard_data_format_description);
-        rsPage.addSubPage(new PrefPageResultSetPresentation(), CoreMessages.dialog_connection_edit_wizard_presentation, CoreMessages.dialog_connection_edit_wizard_presentation_description);
-        WizardPrefPage sqlPage = addPreferencePage(new PrefPageSQLEditor(), CoreMessages.dialog_connection_edit_wizard_sql_editor, CoreMessages.dialog_connection_edit_wizard_sql_editor_description);
-        sqlPage.addSubPage(new PrefPageSQLExecute(), CoreMessages.dialog_connection_edit_wizard_sql_processing, CoreMessages.dialog_connection_edit_wizard_sql_processing_description);
+        addPreferencePage(new PrefPageMetaData(), "Metadata", "Metadata reading preferences");
+        WizardPrefPage rsPage = addPreferencePage(new PrefPageResultSetMain(), "Result Sets", "Result Set preferences");
+        rsPage.addSubPage(new PrefPageResultSetBinaries(), "Binaries", "Binary data representation");
+        rsPage.addSubPage(new PrefPageDataFormat(), "Data Formatting", "Data formatting preferences");
+        rsPage.addSubPage(new PrefPageResultSetPresentation(), "Presentation", "ResultSets UI & presentation");
+        WizardPrefPage sqlPage = addPreferencePage(new PrefPageSQLEditor(), "SQL Editor", "SQL editor settings");
+        sqlPage.addSubPage(new PrefPageSQLExecute(), "SQL Processing", "SQL processing settings");
     }
 
     private WizardPrefPage addPreferencePage(PreferencePage prefPage, String title, String description)
     {
-        WizardPrefPage wizardPage = createPreferencePage(prefPage, title, description);
-        addPage(wizardPage);
-        return wizardPage;
-    }
-
-    private WizardPrefPage createPreferencePage(PreferencePage prefPage, String title, String description) {
         WizardPrefPage wizardPage = new WizardPrefPage(prefPage, title, description);
         prefPages.add(wizardPage);
         if (prefPage instanceof IWorkbenchPropertyPage) {
             ((IWorkbenchPropertyPage) prefPage).setElement(originalDataSource);
         }
+        addPage(wizardPage);
         return wizardPage;
     }
 
@@ -222,8 +208,8 @@ public class EditConnectionWizard extends ConnectionWizard
         if (originalDataSource.isConnected()) {
             if (UIUtils.confirmAction(
                 getShell(),
-                CoreMessages.dialog_connection_edit_wizard_conn_change_title,
-                NLS.bind(CoreMessages.dialog_connection_edit_wizard_conn_change_question, originalDataSource.getName()) ))
+                "Connection changed",
+                "Connection '" + originalDataSource.getName() + "' has been changed.\nDo you want to reconnect?"))
             {
                 DataSourceHandler.reconnectDataSource(null, originalDataSource);
             }
@@ -241,7 +227,7 @@ public class EditConnectionWizard extends ConnectionWizard
     }
 
     private boolean checkLockPassword() {
-        BaseAuthDialog dialog = new BaseAuthDialog(getShell(), CoreMessages.dialog_connection_edit_wizard_lock_pwd_title, true);
+        BaseAuthDialog dialog = new BaseAuthDialog(getShell(), "Enter lock password", true);
         if (dialog.open() == IDialogConstants.OK_ID) {
             final String userPassword = dialog.getUserPassword();
             if (!CommonUtils.isEmpty(userPassword)) {
@@ -251,9 +237,9 @@ public class EditConnectionWizard extends ConnectionWizard
                     if (hexString.equals(dataSource.getLockPasswordHash())) {
                         return true;
                     }
-                    UIUtils.showMessageBox(getShell(), CoreMessages.dialog_connection_edit_wizard_bad_pwd_title, CoreMessages.dialog_connection_edit_wizard_bad_pwd_msg, SWT.ICON_ERROR);
+                    UIUtils.showMessageBox(getShell(), "Bad password", "Password doesn't match", SWT.ICON_ERROR);
                 } catch (Throwable e) {
-                    DBUserInterface.getInstance().showError(CoreMessages.dialog_connection_edit_wizard_error_md5_title, CoreMessages.dialog_connection_edit_wizard_error_md5_msg, e);
+                    DBUserInterface.getInstance().showError("Error making MD5", "Can't generate password hash", e);
                 }
             }
         }

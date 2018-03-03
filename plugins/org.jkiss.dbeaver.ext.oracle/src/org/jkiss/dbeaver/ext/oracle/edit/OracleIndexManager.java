@@ -82,8 +82,7 @@ public class OracleIndexManager extends SQLIndexManager<OracleTableIndex, Oracle
                             index,
                             (OracleTableColumn) tableColumn,
                             colIndex++,
-                            !Boolean.TRUE.equals(editPage.getAttributeProperty(tableColumn, EditIndexPage.PROP_DESC)),
-                            null));
+                            !Boolean.TRUE.equals(editPage.getAttributeProperty(tableColumn, EditIndexPage.PROP_DESC))));
                 }
                 return index;
             }

@@ -49,19 +49,16 @@ public class PrefPageSQLExecute extends TargetPrefPage
     private Spinner commitLinesText;
     private Button fetchResultSetsCheck;
     private Button resetCursorCheck;
-    private Button maxEditorCheck;
 
     private Text statementDelimiterText;
     private Button ignoreNativeDelimiter;
     private Button blankLineDelimiter;
-    private Button removeTrailingDelimiter;
 
     private Button enableSQLParameters;
     private Button enableSQLAnonymousParameters;
     private Text anonymousParameterMarkText;
     private Text namedParameterPrefixText;
     private Button enableParametersInDDL;
-    private Button enableVariables;
 
     public PrefPageSQLExecute()
     {
@@ -84,17 +81,12 @@ public class PrefPageSQLExecute extends TargetPrefPage
             store.contains(ModelPreferences.SCRIPT_STATEMENT_DELIMITER) ||
             store.contains(ModelPreferences.SCRIPT_IGNORE_NATIVE_DELIMITER) ||
             store.contains(ModelPreferences.SCRIPT_STATEMENT_DELIMITER_BLANK) ||
-            store.contains(ModelPreferences.QUERY_REMOVE_TRAILING_DELIMITER) ||
-
             store.contains(ModelPreferences.SQL_PARAMETERS_ENABLED) ||
             store.contains(ModelPreferences.SQL_PARAMETERS_IN_DDL_ENABLED) ||
             store.contains(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_ENABLED) ||
             store.contains(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_MARK) ||
             store.contains(ModelPreferences.SQL_NAMED_PARAMETERS_PREFIX) ||
-            store.contains(ModelPreferences.SQL_VARIABLES_ENABLED) ||
-
             store.contains(SQLPreferenceConstants.RESET_CURSOR_ON_EXECUTE) ||
-            store.contains(SQLPreferenceConstants.MAXIMIZE_EDITOR_ON_SCRIPT_EXECUTE) ||
             store.contains(SQLPreferenceConstants.BEEP_ON_QUERY_END) ||
             store.contains(SQLPreferenceConstants.REFRESH_DEFAULTS_AFTER_EXECUTE)
         ;
@@ -113,7 +105,8 @@ public class PrefPageSQLExecute extends TargetPrefPage
 
         // General settings
         {
-            Composite commonGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_sql_editor_group_common, 2, GridData.FILL_HORIZONTAL | GridData.VERTICAL_ALIGN_BEGINNING, 0);
+            Composite commonGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_sql_editor_group_common, 2, GridData.FILL_HORIZONTAL, 0);
+            UIUtils.setGridSpan(commonGroup, 2, 1);
             {
                 invalidateBeforeExecuteCheck = UIUtils.createCheckbox(commonGroup, CoreMessages.pref_page_sql_editor_label_invalidate_before_execute, null, false, 2);
                 soundOnQueryEnd = UIUtils.createCheckbox(commonGroup, CoreMessages.pref_page_sql_editor_label_sound_on_query_end, null, false, 2);
@@ -126,7 +119,7 @@ public class PrefPageSQLExecute extends TargetPrefPage
                 executeTimeoutText.setIncrement(1);
                 executeTimeoutText.setMinimum(0);
                 executeTimeoutText.setMaximum(100000);
-                executeTimeoutText.setToolTipText(CoreMessages.pref_page_sql_editor_label_sql_timeout_tip);
+                executeTimeoutText.setToolTipText("Query execute timeout (in seconds). 0 means no timeout");
 
             }
         }
@@ -134,6 +127,7 @@ public class PrefPageSQLExecute extends TargetPrefPage
         // Scripts
         {
             Composite scriptsGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_sql_editor_group_scripts, 2, GridData.FILL_HORIZONTAL, 0);
+            UIUtils.setGridSpan(scriptsGroup, 2, 1);
             {
                 UIUtils.createControlLabel(scriptsGroup, CoreMessages.pref_page_sql_editor_label_commit_type);
 
@@ -165,7 +159,6 @@ public class PrefPageSQLExecute extends TargetPrefPage
 
             fetchResultSetsCheck = UIUtils.createCheckbox(scriptsGroup, CoreMessages.pref_page_sql_editor_checkbox_fetch_resultsets, null, false, 2);
             resetCursorCheck = UIUtils.createCheckbox(scriptsGroup, CoreMessages.pref_page_sql_editor_checkbox_reset_cursor, null, false, 2);
-            maxEditorCheck = UIUtils.createCheckbox(scriptsGroup, CoreMessages.pref_page_sql_editor_checkbox_max_editor_on_script_exec, null, false, 2);
         }
         // Parameters
         {
@@ -176,8 +169,7 @@ public class PrefPageSQLExecute extends TargetPrefPage
             anonymousParameterMarkText.setTextLimit(1);
             namedParameterPrefixText = UIUtils.createLabelText(paramsGroup, CoreMessages.pref_page_sql_editor_text_named_parameter_prefix, "", SWT.BORDER, new GridData(32, SWT.DEFAULT));
             namedParameterPrefixText.setTextLimit(1);
-            enableParametersInDDL = UIUtils.createCheckbox(paramsGroup, CoreMessages.pref_page_sql_editor_enable_parameters_in_ddl, CoreMessages.pref_page_sql_editor_enable_parameters_in_ddl_tip, false, 2);
-            enableVariables = UIUtils.createCheckbox(paramsGroup, CoreMessages.pref_page_sql_editor_enable_variables, CoreMessages.pref_page_sql_editor_enable_variables_tip, false, 2);
+            enableParametersInDDL = UIUtils.createCheckbox(paramsGroup, "Enable parameters in DDL", null, false, 2);
         }
 
         // Delimiters
@@ -187,7 +179,6 @@ public class PrefPageSQLExecute extends TargetPrefPage
             //statementDelimiterText.setTextLimit(1);
             ignoreNativeDelimiter = UIUtils.createCheckbox(delimGroup, CoreMessages.pref_page_sql_editor_checkbox_ignore_native_delimiter, null, false, 2);
             blankLineDelimiter = UIUtils.createCheckbox(delimGroup, CoreMessages.pref_page_sql_editor_checkbox_blank_line_delimiter, null, false, 2);
-            removeTrailingDelimiter = UIUtils.createCheckbox(delimGroup, CoreMessages.pref_page_sql_editor_checkbox_remove_trailing_delimiter, null, false, 2);
         }
 
         return composite;
@@ -207,19 +198,16 @@ public class PrefPageSQLExecute extends TargetPrefPage
             commitLinesText.setSelection(store.getInt(DBeaverPreferences.SCRIPT_COMMIT_LINES));
             fetchResultSetsCheck.setSelection(store.getBoolean(DBeaverPreferences.SCRIPT_FETCH_RESULT_SETS));
             resetCursorCheck.setSelection(store.getBoolean(SQLPreferenceConstants.RESET_CURSOR_ON_EXECUTE));
-            maxEditorCheck.setSelection(store.getBoolean(SQLPreferenceConstants.MAXIMIZE_EDITOR_ON_SCRIPT_EXECUTE));
 
             statementDelimiterText.setText(store.getString(ModelPreferences.SCRIPT_STATEMENT_DELIMITER));
             ignoreNativeDelimiter.setSelection(store.getBoolean(ModelPreferences.SCRIPT_IGNORE_NATIVE_DELIMITER));
             blankLineDelimiter.setSelection(store.getBoolean(ModelPreferences.SCRIPT_STATEMENT_DELIMITER_BLANK));
-            removeTrailingDelimiter.setSelection(store.getBoolean(ModelPreferences.QUERY_REMOVE_TRAILING_DELIMITER));
 
             enableSQLParameters.setSelection(store.getBoolean(ModelPreferences.SQL_PARAMETERS_ENABLED));
             enableSQLAnonymousParameters.setSelection(store.getBoolean(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_ENABLED));
             anonymousParameterMarkText.setText(store.getString(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_MARK));
             namedParameterPrefixText.setText(store.getString(ModelPreferences.SQL_NAMED_PARAMETERS_PREFIX));
             enableParametersInDDL.setSelection(store.getBoolean(ModelPreferences.SQL_PARAMETERS_IN_DDL_ENABLED));
-            enableVariables.setSelection(store.getBoolean(ModelPreferences.SQL_VARIABLES_ENABLED));
         } catch (Exception e) {
             log.warn(e);
         }
@@ -239,19 +227,16 @@ public class PrefPageSQLExecute extends TargetPrefPage
             store.setValue(DBeaverPreferences.SCRIPT_ERROR_HANDLING, CommonUtils.fromOrdinal(SQLScriptErrorHandling.class, errorHandlingCombo.getSelectionIndex()).name());
             store.setValue(DBeaverPreferences.SCRIPT_FETCH_RESULT_SETS, fetchResultSetsCheck.getSelection());
             store.setValue(SQLPreferenceConstants.RESET_CURSOR_ON_EXECUTE, resetCursorCheck.getSelection());
-            store.setValue(SQLPreferenceConstants.MAXIMIZE_EDITOR_ON_SCRIPT_EXECUTE, maxEditorCheck.getSelection());
 
             store.setValue(ModelPreferences.SCRIPT_STATEMENT_DELIMITER, statementDelimiterText.getText());
             store.setValue(ModelPreferences.SCRIPT_IGNORE_NATIVE_DELIMITER, ignoreNativeDelimiter.getSelection());
             store.setValue(ModelPreferences.SCRIPT_STATEMENT_DELIMITER_BLANK, blankLineDelimiter.getSelection());
-            store.setValue(ModelPreferences.QUERY_REMOVE_TRAILING_DELIMITER, removeTrailingDelimiter.getSelection());
 
             store.setValue(ModelPreferences.SQL_PARAMETERS_ENABLED, enableSQLParameters.getSelection());
             store.setValue(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_ENABLED, enableSQLAnonymousParameters.getSelection());
             store.setValue(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_MARK, anonymousParameterMarkText.getText());
             store.setValue(ModelPreferences.SQL_NAMED_PARAMETERS_PREFIX, namedParameterPrefixText.getText());
             store.setValue(ModelPreferences.SQL_PARAMETERS_IN_DDL_ENABLED, enableParametersInDDL.getSelection());
-            store.setValue(ModelPreferences.SQL_VARIABLES_ENABLED, enableVariables.getSelection());
         } catch (Exception e) {
             log.warn(e);
         }
@@ -270,18 +255,15 @@ public class PrefPageSQLExecute extends TargetPrefPage
         store.setToDefault(DBeaverPreferences.SCRIPT_FETCH_RESULT_SETS);
 
         store.setToDefault(SQLPreferenceConstants.RESET_CURSOR_ON_EXECUTE);
-        store.setToDefault(SQLPreferenceConstants.MAXIMIZE_EDITOR_ON_SCRIPT_EXECUTE);
 
         store.setToDefault(ModelPreferences.SCRIPT_STATEMENT_DELIMITER);
         store.setToDefault(ModelPreferences.SCRIPT_IGNORE_NATIVE_DELIMITER);
-        store.setToDefault(ModelPreferences.SCRIPT_STATEMENT_DELIMITER_BLANK);
-        store.setToDefault(ModelPreferences.QUERY_REMOVE_TRAILING_DELIMITER);
 
         store.setToDefault(ModelPreferences.SQL_PARAMETERS_ENABLED);
         store.setToDefault(ModelPreferences.SQL_PARAMETERS_IN_DDL_ENABLED);
         store.setToDefault(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_ENABLED);
         store.setToDefault(ModelPreferences.SQL_ANONYMOUS_PARAMETERS_MARK);
-        store.setToDefault(ModelPreferences.SQL_VARIABLES_ENABLED);
+        store.setToDefault(ModelPreferences.SCRIPT_STATEMENT_DELIMITER_BLANK);
 
         store.setToDefault(ModelPreferences.SQL_NAMED_PARAMETERS_PREFIX);
         store.setToDefault(SQLPreferenceConstants.BEEP_ON_QUERY_END);

@@ -17,6 +17,7 @@
 
 package org.jkiss.dbeaver.ui.controls.resultset;
 
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.fieldassist.ContentProposal;
 import org.eclipse.jface.fieldassist.IContentProposal;
 import org.eclipse.jface.fieldassist.IContentProposalProvider;
@@ -65,10 +66,8 @@ import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -96,6 +95,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
     private final ToolItem filtersApplyButton;
     private final ToolItem filtersClearButton;
     private final ToolItem filtersSaveButton;
+    private final ToolItem autoRefreshButton;
     private final ToolItem historyBackButton;
     private final ToolItem historyForwardButton;
 
@@ -111,6 +111,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
     private String prevQuery = null;
     private final List<String> filtersHistory = new ArrayList<>();
     private Menu historyMenu;
+    private Menu schedulerMenu;
 
     ResultSetFilterPanel(ResultSetViewer rsv) {
         super(rsv.getControl(), SWT.NONE);
@@ -160,8 +161,8 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
                             e.gc.setForeground(shadowColor);
                             e.gc.setFont(hintFont);
                             e.gc.drawText(supportsDataFilter ?
-                                    CoreMessages.sql_editor_resultset_filter_panel_text_enter_sql_to_filter:
-                                    CoreMessages.sql_editor_resultset_filter_panel_text_enter_filter_not_support,
+                                    "Enter a SQL expression to filter results (use Ctrl+Space)" :
+                                    "Data filter is not supported",
                                 2, 0, true);
                             e.gc.setFont(null);
                         }
@@ -215,7 +216,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
             filtersApplyButton = new ToolItem(filterToolbar, SWT.PUSH | SWT.NO_FOCUS);
             filtersApplyButton.setImage(DBeaverIcons.getImage(UIIcon.FILTER_APPLY));
             //filtersApplyButton.setText("Apply");
-            filtersApplyButton.setToolTipText(CoreMessages.sql_editor_resultset_filter_panel_btn_apply);
+            filtersApplyButton.setToolTipText("Apply filter criteria");
             filtersApplyButton.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
@@ -226,7 +227,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
             filtersClearButton = new ToolItem(filterToolbar, SWT.PUSH | SWT.NO_FOCUS);
             filtersClearButton.setImage(DBeaverIcons.getImage(UIIcon.FILTER_RESET));
-            filtersClearButton.setToolTipText(CoreMessages.sql_editor_resultset_filter_panel_btn_remove);
+            filtersClearButton.setToolTipText("Remove all filters/orderings");
             filtersClearButton.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
@@ -237,7 +238,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
             filtersSaveButton = new ToolItem(filterToolbar, SWT.PUSH | SWT.NO_FOCUS);
             filtersSaveButton.setImage(DBeaverIcons.getImage(UIIcon.FILTER_SAVE));
-            filtersSaveButton.setToolTipText(CoreMessages.sql_editor_resultset_filter_panel_btn_save);
+            filtersSaveButton.setToolTipText("Save filter settings for current object");
             filtersSaveButton.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
@@ -248,7 +249,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
             ToolItem filtersCustomButton = new ToolItem(filterToolbar, SWT.PUSH | SWT.NO_FOCUS);
             filtersCustomButton.setImage(DBeaverIcons.getImage(UIIcon.FILTER));
-            filtersCustomButton.setToolTipText(CoreMessages.sql_editor_resultset_filter_panel_btn_custom);
+            filtersCustomButton.setToolTipText("Custom Filters");
             filtersCustomButton.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
@@ -259,7 +260,9 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
             UIUtils.createToolBarSeparator(filterToolbar, SWT.VERTICAL);
 
-            rsv.getAutoRefresh().populateRefreshButton(filterToolbar);
+            autoRefreshButton = new ToolItem(filterToolbar, SWT.DROP_DOWN | SWT.NO_FOCUS);
+            autoRefreshButton.addSelectionListener(new AutoRefreshMenuListener(autoRefreshButton));
+            updateAutoRefreshToolbar();
 
             UIUtils.createToolBarSeparator(filterToolbar, SWT.VERTICAL);
 
@@ -300,21 +303,25 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
         enablePanelControls(false);
 
-        this.addDisposeListener(e -> {
-            if (historyMenu != null) {
-                historyMenu.dispose();
-                historyMenu = null;
+        this.addDisposeListener(new DisposeListener() {
+            @Override
+            public void widgetDisposed(DisposeEvent e) {
+                if (historyMenu != null) {
+                    historyMenu.dispose();
+                    historyMenu = null;
+                }
+                if (schedulerMenu != null) {
+                    schedulerMenu.dispose();
+                    schedulerMenu = null;
+                }
+                UIUtils.dispose(sizingGC);
+                UIUtils.dispose(hintFont);
             }
-            UIUtils.dispose(sizingGC);
-            UIUtils.dispose(hintFont);
         });
 
     }
 
     void enableFilters(boolean enableFilters) {
-        if (isDisposed()) {
-            return;
-        }
         enablePanelControls(enableFilters);
         if (enableFilters) {
             final boolean supportsDataFilter = viewer.supportsDataFilter();
@@ -368,6 +375,16 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
         filterComposite.layout();
         redrawPanels();
+    }
+
+    void updateAutoRefreshToolbar() {
+        if (viewer.isAutoRefreshEnabled()) {
+            autoRefreshButton.setImage(DBeaverIcons.getImage(UIIcon.RS_SCHED_STOP));
+            autoRefreshButton.setToolTipText("Stop auto-refresh");
+        } else {
+            autoRefreshButton.setImage(DBeaverIcons.getImage(UIIcon.RS_SCHED_START));
+            autoRefreshButton.setToolTipText("Configure auto-refresh");
+        }
     }
 
     private void enablePanelControls(boolean enable) {
@@ -517,7 +534,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
         if (activeObjectImage != null) {
             iconLabel.setImage(DBeaverIcons.getImage(activeObjectImage));
         }
-        iconLabel.setToolTipText(CoreMessages.sql_editor_resultset_filter_panel_label);
+        iconLabel.setToolTipText("Click to open query in editor");
         iconLabel.setLayoutData(new GridData(GridData.VERTICAL_ALIGN_BEGINNING));
         iconLabel.setCursor(getDisplay().getSystemCursor(SWT.CURSOR_HAND));
         iconLabel.addMouseListener(new MouseAdapter() {
@@ -542,11 +559,6 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
                 super.createPartControl(parent);
                 getAction(ITextEditorActionConstants.CONTEXT_PREFERENCES).setEnabled(false);
             }
-
-            @Override
-            public boolean isFoldingEnabled() {
-                return false;
-            }
         };
         editor.setHasVerticalRuler(false);
         editor.init(new SubEditorSite(viewer.getSite()), new StringEditorInput(DEFAULT_QUERY_TEXT, getActiveQueryText(), true, GeneralUtils.getDefaultFileEncoding()));
@@ -556,7 +568,12 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
         //textWidget.setAlwaysShowScrollBars(false);
 
         panel.setBackground(textWidget.getBackground());
-        panel.addDisposeListener(e -> editor.dispose());
+        panel.addDisposeListener(new DisposeListener() {
+            @Override
+            public void widgetDisposed(DisposeEvent e) {
+                editor.dispose();
+            }
+        });
 
         return textWidget;
     }
@@ -616,7 +633,12 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
         FilterPanel(Composite parent, int style) {
             super(parent, style);
 
-            addPaintListener(this::paintPanel);
+            addPaintListener(new PaintListener() {
+                @Override
+                public void paintControl(PaintEvent e) {
+                    paintPanel(e);
+                }
+            });
             addMouseTrackListener(new MouseTrackAdapter() {
                 @Override
                 public void mouseEnter(MouseEvent e) {
@@ -647,7 +669,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
         ActiveObjectPanel(Composite addressBar) {
             super(addressBar, SWT.NONE);
             setLayoutData(new GridData(GridData.FILL_VERTICAL));
-            setToolTipText(CoreMessages.sql_editor_resultset_filter_panel_btn_open_console);
+            setToolTipText("Ctrl+click to open SQL console");
 
             this.addMouseListener(new MouseAdapter() {
                 @Override
@@ -657,7 +679,12 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
 
                 @Override
                 public void mouseDown(final MouseEvent e) {
-                    DBeaverUI.asyncExec(() -> showObjectInfoPopup(e));
+                    DBeaverUI.asyncExec(new Runnable() {
+                        @Override
+                        public void run() {
+                            showObjectInfoPopup(e);
+                        }
+                    });
                 }
             });
         }
@@ -772,7 +799,12 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
             gd.widthHint = dropImageE.getBounds().width;
             setLayoutData(gd);
 
-            addDisposeListener(e -> UIUtils.dispose(dropImageD));
+            addDisposeListener(new DisposeListener() {
+                @Override
+                public void widgetDisposed(DisposeEvent e) {
+                    UIUtils.dispose(dropImageD);
+                }
+            });
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseUp(MouseEvent e) {
@@ -866,7 +898,7 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
                             item = historyTable.getItem(selectionIndex);
                         }
                     }
-                    if (item != null && !item.isDisposed()) {
+                    if (item != null) {
                         if (e.keyCode == SWT.DEL) {
                             final String filterValue = item.getText();
                             try {
@@ -886,7 +918,12 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
                     }
                 }
             });
-            historyTable.addMouseMoveListener(e -> hoverItem = historyTable.getItem(new Point(e.x, e.y)));
+            historyTable.addMouseMoveListener(new MouseMoveListener() {
+                @Override
+                public void mouseMove(MouseEvent e) {
+                    hoverItem = historyTable.getItem(new Point(e.x, e.y));
+                }
+            });
             historyTable.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseDown(MouseEvent e) {
@@ -913,7 +950,12 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
             setToolTipText(CoreMessages.controls_resultset_viewer_action_refresh);
             enabledImage = DBeaverIcons.getImage(UIIcon.RS_REFRESH);
             disabledImage = new Image(enabledImage.getDevice(), enabledImage, SWT.IMAGE_GRAY);
-            addDisposeListener(e -> UIUtils.dispose(disabledImage));
+            addDisposeListener(new DisposeListener() {
+                @Override
+                public void widgetDisposed(DisposeEvent e) {
+                    UIUtils.dispose(disabledImage);
+                }
+            });
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseUp(MouseEvent e) {
@@ -985,6 +1027,96 @@ class ResultSetFilterPanel extends Composite implements IContentProposalProvider
                 int newPosition = back ? historyPosition - 1 : historyPosition + 1;
                 viewer.navigateHistory(newPosition);
             }
+        }
+    }
+
+    private static final int[] AUTO_REFRESH_DEFAULTS = new int[]{1, 5, 10, 15, 30, 60};
+
+    private class AutoRefreshMenuListener extends SelectionAdapter {
+        private final ToolItem dropdown;
+
+        AutoRefreshMenuListener(ToolItem item) {
+            this.dropdown = item;
+        }
+
+        @Override
+        public void widgetSelected(SelectionEvent e) {
+            if (e.detail == SWT.ARROW) {
+                ToolItem item = (ToolItem) e.widget;
+                Rectangle rect = item.getBounds();
+                Point pt = item.getParent().toDisplay(new Point(rect.x, rect.y));
+
+                if (schedulerMenu != null) {
+                    schedulerMenu.dispose();
+                }
+                schedulerMenu = new Menu(dropdown.getParent().getShell());
+                {
+                    MenuItem mi = new MenuItem(schedulerMenu, SWT.NONE);
+                    mi.setText("Customize ...");
+                    mi.addSelectionListener(new SelectionAdapter() {
+                        @Override
+                        public void widgetSelected(SelectionEvent e) {
+                            runCustomized();
+                        }
+                    });
+
+                    mi = new MenuItem(schedulerMenu, SWT.NONE);
+                    mi.setText("Stop");
+                    mi.setEnabled(viewer.isAutoRefreshEnabled());
+                    mi.addSelectionListener(new SelectionAdapter() {
+                        @Override
+                        public void widgetSelected(SelectionEvent e) {
+                            viewer.enableAutoRefresh(false);
+                        }
+                    });
+                    new MenuItem(schedulerMenu, SWT.SEPARATOR);
+
+                    List<Integer> presetList = new ArrayList<>();
+                    for (int t : AUTO_REFRESH_DEFAULTS) presetList.add(t);
+
+                    int defaultInterval = viewer.getRefreshSettings().refreshInterval;
+                    if (defaultInterval > 0 && !presetList.contains(defaultInterval)) {
+                        presetList.add(0, defaultInterval);
+                    }
+                    for (final Integer timeout : presetList) {
+                        mi = new MenuItem(schedulerMenu, SWT.PUSH);
+                        mi.setText("Refresh each " + String.valueOf(timeout) + " seconds");
+                        if (viewer.isAutoRefreshEnabled() && timeout == defaultInterval) {
+                            schedulerMenu.setDefaultItem(mi);
+                        }
+                        mi.addSelectionListener(new SelectionAdapter() {
+                            @Override
+                            public void widgetSelected(SelectionEvent e) {
+                                runPreset(timeout);
+                            }
+                        });
+                    }
+                }
+
+                schedulerMenu.setLocation(pt.x, pt.y + rect.height);
+                schedulerMenu.setVisible(true);
+            } else {
+                if (viewer.isAutoRefreshEnabled()) {
+                    viewer.enableAutoRefresh(false);
+                } else {
+                    runCustomized();
+                }
+            }
+        }
+
+        private void runCustomized() {
+            AutoRefreshConfigDialog dialog = new AutoRefreshConfigDialog(viewer);
+            if (dialog.open() == IDialogConstants.OK_ID) {
+                viewer.setRefreshSettings(dialog.getRefreshSettings());
+                viewer.enableAutoRefresh(true);
+            }
+        }
+
+        private void runPreset(int interval) {
+            ResultSetViewer.RefreshSettings settings = new ResultSetViewer.RefreshSettings(viewer.getRefreshSettings());
+            settings.refreshInterval = interval;
+            viewer.setRefreshSettings(settings);
+            viewer.enableAutoRefresh(true);
         }
     }
 

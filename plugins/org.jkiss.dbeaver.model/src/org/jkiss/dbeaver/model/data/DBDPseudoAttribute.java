@@ -200,13 +200,13 @@ public class DBDPseudoAttribute implements DBPNamedObject {
         }
 
         @Override
-        public Integer getScale()
+        public int getScale()
         {
             return attribute.getScale();
         }
 
         @Override
-        public Integer getPrecision()
+        public int getPrecision()
         {
             return attribute.getPrecision();
         }

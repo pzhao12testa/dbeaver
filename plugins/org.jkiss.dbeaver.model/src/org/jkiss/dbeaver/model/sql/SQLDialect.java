@@ -26,11 +26,8 @@ import org.jkiss.dbeaver.model.data.DBDBinaryFormatter;
 import org.jkiss.dbeaver.model.data.DBDDataFilter;
 import org.jkiss.dbeaver.model.struct.DBSAttributeBase;
 import org.jkiss.dbeaver.model.struct.DBSTypedObject;
-import org.jkiss.dbeaver.model.struct.rdb.DBSProcedure;
-import org.jkiss.dbeaver.model.struct.rdb.DBSProcedureParameter;
 import org.jkiss.utils.Pair;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -123,12 +120,6 @@ public interface SQLDialect {
     String getSearchStringEscape();
 
     /**
-     * Strings (in single or double quotes) escape character. Zero (i.e. no scape character) by default.
-     * Back slash in many dialects
-     */
-    char getStringEscapeCharacter();
-
-    /**
      * Catalog name usage in queries
      * @return catalog usage
      */
@@ -219,8 +210,6 @@ public interface SQLDialect {
 
     boolean supportsAliasInUpdate();
 
-    boolean supportsTableDropCascade();
-
     /**
      * Check whether dialect support plain comment queries (queries which contains only comments)
      */
@@ -307,5 +296,4 @@ public interface SQLDialect {
     @Nullable
     String getColumnTypeModifiers(@NotNull DBSTypedObject column, @NotNull String typeName, @NotNull DBPDataKind dataKind);
 
-    void generateStoredProcedureCall(StringBuilder sql, DBSProcedure proc, Collection<? extends DBSProcedureParameter> parameters);
 }

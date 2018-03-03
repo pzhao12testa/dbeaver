@@ -29,10 +29,8 @@ public class QueryTransformerLimit implements DBCQueryTransformer {
 
     //private static final Pattern SELECT_PATTERN = Pattern.compile("\\s*(?:select|update|delete|insert).+", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     public static final String KEYWORD_LIMIT = "LIMIT";
-    public static final String KEYWORD_OFFSET = "OFFSET";
 
-    private boolean supportsExtendedLimit;
-    private boolean supportsOffsetKeyword;
+    private boolean supportsOffset;
     private Number offset;
     private Number length;
     private boolean limitSet;
@@ -41,13 +39,8 @@ public class QueryTransformerLimit implements DBCQueryTransformer {
         this(true);
     }
 
-    public QueryTransformerLimit(boolean supportsExtendedLimit) {
-        this(supportsExtendedLimit, false);
-    }
-
-    public QueryTransformerLimit(boolean supportsExtendedLimit, boolean supportsOffsetKeyword) {
-        this.supportsExtendedLimit = supportsExtendedLimit;
-        this.supportsOffsetKeyword = supportsOffsetKeyword;
+    public QueryTransformerLimit(boolean supportsOffset) {
+        this.supportsOffset = supportsOffset;
     }
 
     @Override
@@ -74,19 +67,13 @@ public class QueryTransformerLimit implements DBCQueryTransformer {
             limitSet = false;
             newQuery = query.getText();
         } else {
-            if (supportsExtendedLimit) {
+            if (supportsOffset) {
                 newQuery = query.getText() + "\n" + KEYWORD_LIMIT + " " + offset + ", " + length;
-            } else if (supportsOffsetKeyword) {
-                // LIMIT + OFFSET
-                newQuery = query.getText() + "\n" + KEYWORD_LIMIT + " " + length.longValue();
-                if (offset.longValue() > 0) {
-                    newQuery += " " + KEYWORD_OFFSET + " " + offset.longValue();
-                }
             } else {
                 // We can limit only total row number
                 newQuery = query.getText() + "\n" + KEYWORD_LIMIT + " " + (offset.longValue() + length.longValue());
             }
-            limitSet = supportsExtendedLimit || supportsOffsetKeyword;
+            limitSet = supportsOffset;
         }
         return newQuery;
     }

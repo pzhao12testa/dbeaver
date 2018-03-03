@@ -32,10 +32,9 @@ import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.PreferencesUtil;
-import org.eclipse.ui.editors.text.EditorsUI;
+import org.eclipse.ui.internal.editors.text.EditorsPlugin;
 import org.eclipse.ui.texteditor.*;
 import org.eclipse.ui.texteditor.templates.ITemplatesPage;
 import org.eclipse.ui.themes.IThemeManager;
@@ -59,7 +58,6 @@ import org.jkiss.dbeaver.ui.IErrorVisualizer;
 import org.jkiss.dbeaver.ui.TextUtils;
 import org.jkiss.dbeaver.ui.editors.sql.syntax.SQLPartitionScanner;
 import org.jkiss.dbeaver.ui.editors.sql.syntax.SQLRuleManager;
-import org.jkiss.dbeaver.ui.editors.sql.syntax.rules.SQLVariableRule;
 import org.jkiss.dbeaver.ui.editors.sql.syntax.tokens.SQLControlToken;
 import org.jkiss.dbeaver.ui.editors.sql.syntax.tokens.SQLToken;
 import org.jkiss.dbeaver.ui.editors.sql.templates.SQLTemplatesPage;
@@ -73,23 +71,21 @@ import org.jkiss.utils.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * SQL Executor
  */
 public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisualizer {
-    
     static protected final Log log = Log.getLog(SQLEditorBase.class);
+    public static final String SQL_EDITOR_CONTEXT = "org.jkiss.dbeaver.ui.editors.sql";
 
     static {
         // SQL editor preferences. Do this here because it initializes display
         // (that's why we can't run it in prefs initializer classes which run before workbench creation)
         {
-            IPreferenceStore editorStore = EditorsUI.getPreferenceStore();
+            IPreferenceStore editorStore = EditorsPlugin.getDefault().getPreferenceStore();
             editorStore.setDefault(SQLPreferenceConstants.MATCHING_BRACKETS, true);
-            editorStore.setDefault(SQLPreferenceConstants.MATCHING_BRACKETS_COLOR, "128,128,128"); //$NON-NLS-1$
+            editorStore.setDefault(SQLPreferenceConstants.MATCHING_BRACKETS_COLOR, "128,128,128");
         }
     }
 
@@ -113,17 +109,11 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         syntaxManager = new SQLSyntaxManager();
         ruleManager = new SQLRuleManager(syntaxManager);
         themeListener = new IPropertyChangeListener() {
-            long lastUpdateTime = 0;
             @Override
             public void propertyChange(PropertyChangeEvent event)
             {
                 if (event.getProperty().equals(IThemeManager.CHANGE_CURRENT_THEME) ||
                     event.getProperty().startsWith("org.jkiss.dbeaver.sql.editor")) {
-                    if (lastUpdateTime > 0 && System.currentTimeMillis() - lastUpdateTime < 500) {
-                        // Do not update too often (theme change may trigger this hundreds of times)
-                        return;
-                    }
-                    lastUpdateTime = System.currentTimeMillis();
                     reloadSyntaxRules();
                     // Reconfigure to let comments/strings colors to take effect
                     getSourceViewer().configure(getSourceViewerConfiguration());
@@ -134,14 +124,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
 
         //setDocumentProvider(new SQLDocumentProvider());
         setSourceViewerConfiguration(new SQLEditorSourceViewerConfiguration(this, getPreferenceStore()));
-        setKeyBindingScopes(new String[]{TEXT_EDITOR_CONTEXT, SQLEditorContributions.SQL_EDITOR_CONTEXT});  //$NON-NLS-1$
-    }
-    
-    @Override
-    protected void initializeEditor() {
-        super.initializeEditor();
-        setEditorContextMenuId(SQLEditorContributions.SQL_EDITOR_CONTEXT_MENU_ID);
-        setRulerContextMenuId(SQLEditorContributions.SQL_RULER_CONTEXT_MENU_ID);
+        setKeyBindingScopes(new String[]{TEXT_EDITOR_CONTEXT, SQL_EDITOR_CONTEXT});  //$NON-NLS-1$
     }
 
     @Nullable
@@ -314,18 +297,18 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         }
     }
 */
-    
-    @SuppressWarnings("unchecked")
+
     @Override
-    public <T> T getAdapter(Class<T> required) {
+    public Object getAdapter(Class required)
+    {
         if (projectionSupport != null) {
             Object adapter = projectionSupport.getAdapter(
                 getSourceViewer(), required);
             if (adapter != null)
-                return (T) adapter;
+                return adapter;
         }
         if (ITemplatesPage.class.equals(required)) {
-            return (T) getTemplatesPage();
+            return getTemplatesPage();
         }
 
         return super.getAdapter(required);
@@ -414,15 +397,12 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         addAction(menu, GROUP_SQL_EXTRAS, SQLEditorContributor.ACTION_CONTENT_ASSIST_PROPOSAL);
         addAction(menu, GROUP_SQL_EXTRAS, SQLEditorContributor.ACTION_CONTENT_ASSIST_TIP);
         addAction(menu, GROUP_SQL_EXTRAS, SQLEditorContributor.ACTION_CONTENT_ASSIST_INFORMATION);
-        menu.insertBefore(IWorkbenchActionConstants.MB_ADDITIONS, ActionUtils.makeCommandContribution(getSite(), "org.jkiss.dbeaver.ui.editors.sql.navigate.object"));
-
         {
             MenuManager formatMenu = new MenuManager("Format", "format");
             IAction formatAction = getAction(SQLEditorContributor.ACTION_CONTENT_FORMAT_PROPOSAL);
             if (formatAction != null) {
                 formatMenu.add(formatAction);
             }
-            formatMenu.add(ActionUtils.makeCommandContribution(getSite(), "org.jkiss.dbeaver.ui.editors.sql.morph.delimited.list"));
             formatMenu.add(getAction(ITextEditorActionConstants.UPPER_CASE));
             formatMenu.add(getAction(ITextEditorActionConstants.LOWER_CASE));
             formatMenu.add(new Separator());
@@ -446,11 +426,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
                 new SQLPartitionScanner(dialect),
                 SQLPartitionScanner.SQL_CONTENT_TYPES);
             partitioner.connect(document);
-            try {
-                document.setDocumentPartitioner(SQLPartitionScanner.SQL_PARTITIONING, partitioner);
-            } catch (Throwable e) {
-                log.warn("Error setting SQL partitioner", e); //$NON-NLS-1$
-            }
+            document.setDocumentPartitioner(SQLPartitionScanner.SQL_PARTITIONING, partitioner);
 
             ProjectionViewer projectionViewer = (ProjectionViewer) getSourceViewer();
             if (projectionViewer != null && projectionViewer.getAnnotationModel() != null && document.getLength() > 0) {
@@ -517,13 +493,10 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
     {
         SQLScriptElement element;
         ITextSelection selection = (ITextSelection) getSelectionProvider().getSelection();
-        String selText = selection.getText();
-
-        if (getActivePreferenceStore().getBoolean(ModelPreferences.QUERY_REMOVE_TRAILING_DELIMITER)) {
-            selText = SQLUtils.trimQueryStatement(getSyntaxManager(), selText, !syntaxManager.getDialect().isDelimiterAfterQuery());
-        }
+        String selText = selection.getText().trim();
+        selText = SQLUtils.trimQueryStatement(getSyntaxManager(), selText);
         if (!CommonUtils.isEmpty(selText)) {
-            SQLScriptElement parsedElement = parseQuery(getDocument(), selection.getOffset(), selection.getOffset() + selection.getLength(), selection.getOffset(), false, false);
+            SQLScriptElement parsedElement = parseQuery(getDocument(), selection.getOffset(), selection.getOffset() + selection.getLength(), selection.getOffset(), false);
             if (parsedElement instanceof SQLControlCommand) {
                 // This is a command
                 element = parsedElement;
@@ -568,20 +541,11 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
 
         try {
             int currentLine = document.getLineOfOffset(currentPos);
-            if (useBlankLines) {
-                if (TextUtils.isEmptyLine(document, currentLine)) {
-                    if (currentLine == 0) {
-                        return null;
-                    }
-                    currentLine--;
-                    if (TextUtils.isEmptyLine(document, currentLine)) {
-                        // Prev line empty too. No chance.
-                        return null;
-                    }
-                }
+            int lineOffset = document.getLineOffset(currentLine);
+            if (TextUtils.isEmptyLine(document, currentLine)) {
+                return null;
             }
 
-            int lineOffset = document.getLineOffset(currentLine);
             int firstLine = currentLine;
             while (firstLine > 0) {
                 if (useBlankLines) {
@@ -606,7 +570,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         } catch (BadLocationException e) {
             log.warn(e);
         }
-        return parseQuery(document, startPos, document.getLength(), currentPos, false, false);
+        return parseQuery(document, startPos, document.getLength(), currentPos, false);
     }
 
     public SQLScriptElement extractNextQuery(boolean next) {
@@ -670,50 +634,15 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         return partitioner != null && SQLPartitionScanner.CONTENT_TYPE_SQL_MULTILINE_COMMENT.equals(partitioner.getContentType(currentPos));
     }
 
-    private void startScriptEvaluation() {
+    protected void startScriptEvaluation() {
         ruleManager.startEval();
     }
 
-    private void endScriptEvaluation() {
+    protected void endScriptEvaluation() {
         ruleManager.endEval();
     }
 
-    public List<SQLScriptElement> extractScriptQueries(int startOffset, int length, boolean scriptMode, boolean keepDelimiters, boolean parseParameters)
-    {
-        List<SQLScriptElement> queryList = new ArrayList<>();
-
-        IDocument document = getDocument();
-        if (document == null) {
-            return queryList;
-        }
-
-        this.startScriptEvaluation();
-        try {
-            for (int queryOffset = startOffset; ; ) {
-                SQLScriptElement query = parseQuery(document, queryOffset, startOffset + length, queryOffset, scriptMode, keepDelimiters);
-                if (query == null) {
-                    break;
-                }
-                queryList.add(query);
-                queryOffset = query.getOffset() + query.getLength();
-            }
-        }
-        finally {
-            this.endScriptEvaluation();
-        }
-
-        if (parseParameters && getActivePreferenceStore().getBoolean(ModelPreferences.SQL_PARAMETERS_ENABLED)) {
-            // Parse parameters
-            for (SQLScriptElement query : queryList) {
-                if (query instanceof SQLQuery) {
-                    ((SQLQuery)query).setParameters(parseParameters(getDocument(), (SQLQuery) query));
-                }
-            }
-        }
-        return queryList;
-    }
-
-    protected SQLScriptElement parseQuery(final IDocument document, final int startPos, final int endPos, final int currentPos, final boolean scriptMode, final boolean keepDelimiters) {
+    protected SQLScriptElement parseQuery(final IDocument document, final int startPos, final int endPos, final int currentPos, final boolean scriptMode) {
         if (endPos - startPos <= 0) {
             return null;
         }
@@ -729,197 +658,173 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         boolean hasBlockHeader = false;
         String blockTogglePattern = null;
         int lastTokenLineFeeds = 0;
-        int prevNotEmptyTokenType = SQLToken.T_UNKNOWN;
         for (; ; ) {
             IToken token = ruleManager.nextToken();
             int tokenOffset = ruleManager.getTokenOffset();
             int tokenLength = ruleManager.getTokenLength();
             int tokenType = token instanceof SQLToken ? ((SQLToken)token).getType() : SQLToken.T_UNKNOWN;
-            if (tokenOffset < startPos) {
-                // This may happen with EOF tokens (bug in jface?)
-                return null;
-            }
 
             boolean isDelimiter = tokenType == SQLToken.T_DELIMITER;
             boolean isControl = false;
             String delimiterText = null;
-            try {
-                if (isDelimiter) {
-                    // Save delimiter text
-                    try {
-                        delimiterText = document.get(tokenOffset, tokenLength);
-                    } catch (BadLocationException e) {
-                        log.debug(e);
-                    }
-                } else if (useBlankLines && token.isWhitespace() && tokenLength >= 1) {
-                    // Check for blank line delimiter
-                    if (lastTokenLineFeeds + countLineFeeds(document, tokenOffset, tokenLength) >= 2) {
-                        isDelimiter = true;
-                    }
+            if (isDelimiter) {
+                // Save delimiter text
+                try {
+                    delimiterText = document.get(tokenOffset, tokenLength);
+                } catch (BadLocationException e) {
+                    log.debug(e);
                 }
-                lastTokenLineFeeds = 0;
-                if (tokenLength == 1) {
-                    // Check for bracket block begin/end
-                    try {
-                        char aChar = document.getChar(tokenOffset);
-                        if (aChar == '(' || aChar == '{' || aChar == '[') {
-                            bracketDepth++;
-                        } else if (aChar == ')' || aChar == '}' || aChar == ']') {
-                            bracketDepth--;
-                        }
-                    } catch (BadLocationException e) {
-                        log.warn(e);
-                    }
-                }
-                if (tokenType == SQLToken.T_BLOCK_BEGIN && prevNotEmptyTokenType == SQLToken.T_BLOCK_END) {
-                    // This is a tricky thing.
-                    // In some dialects block end looks like END CASE, END LOOP. It is parsed as
-                    // Block end followed by block begin (as CASE and LOOP are block begin tokens)
-                    // So let's ignore block begin if previos token was block end and there were no delimtiers.
-                    tokenType = SQLToken.T_UNKNOWN;
-                }
-
-                if (tokenType == SQLToken.T_BLOCK_HEADER) {
-                    bracketDepth++;
-                    hasBlocks = true;
-                    hasBlockHeader = true;
-                } else if (tokenType == SQLToken.T_BLOCK_TOGGLE) {
-                    String togglePattern;
-                    try {
-                        togglePattern = document.get(tokenOffset, tokenLength);
-                    } catch (BadLocationException e) {
-                        log.warn(e);
-                        togglePattern = "";
-                    }
-                    // Second toggle pattern must be the same as first one.
-                    // Toggles can be nested (PostgreSQL) and we need to count only outer
-                    if (bracketDepth == 1 && togglePattern.equals(blockTogglePattern)) {
-                        bracketDepth--;
-                        blockTogglePattern = null;
-                    } else if (bracketDepth == 0 && blockTogglePattern == null) {
-                        bracketDepth++;
-                        blockTogglePattern = togglePattern;
-                    } else {
-                        log.debug("Block toggle token inside another block. Can't process it");
-                    }
-                    hasBlocks = true;
-                } else if (tokenType == SQLToken.T_BLOCK_BEGIN) {
-                    if (!hasBlockHeader) {
-                        bracketDepth++;
-                    }
-                    hasBlocks = true;
-                    hasBlockHeader = false;
-                } else if (bracketDepth > 0 && tokenType == SQLToken.T_BLOCK_END) {
-                    // Sometimes query contains END clause without BEGIN. E.g. CASE, IF, etc.
-                    // This END doesn't mean block
-                    if (hasBlocks) {
-                        bracketDepth--;
-                    }
-                    hasBlockHeader = false;
-                } else if (isDelimiter && bracketDepth > 0) {
-                    // Delimiter in some brackets - ignore it
-                    continue;
-                } else if (tokenType == SQLToken.T_SET_DELIMITER || tokenType == SQLToken.T_CONTROL) {
+            } else if (useBlankLines && token.isWhitespace() && tokenLength >= 2) {
+                // Check for blank line delimiter
+                if (lastTokenLineFeeds + countLineFeeds(document, tokenOffset, tokenLength) >= 2) {
                     isDelimiter = true;
-                    isControl = true;
-                } else if (tokenType == SQLToken.T_COMMENT) {
-                    lastTokenLineFeeds = tokenLength < 2 ? 0 : countLineFeeds(document, tokenOffset + tokenLength - 2, 2);
                 }
-
-                boolean cursorInsideToken = currentPos >= tokenOffset && currentPos < tokenOffset + tokenLength;
-                if (isControl && (scriptMode || cursorInsideToken) && !hasValuableTokens) {
-                    // Control query
-                    try {
-                        String controlText = document.get(tokenOffset, tokenLength);
-                        String commandId = null;
-                        if (token instanceof SQLControlToken) {
-                            commandId = ((SQLControlToken) token).getCommandId();
-                        }
-                        return new SQLControlCommand(
-                                getDataSource(),
-                                syntaxManager,
-                                controlText.trim(),
-                                commandId,
-                                tokenOffset,
-                                tokenLength,
-                                tokenType == SQLToken.T_SET_DELIMITER);
-                    } catch (BadLocationException e) {
-                        log.warn("Can't extract control statement", e); //$NON-NLS-1$
-                        return null;
+            }
+            lastTokenLineFeeds = 0;
+            if (tokenLength == 1) {
+                // Check for bracket block begin/end
+                try {
+                    char aChar = document.getChar(tokenOffset);
+                    if (aChar == '(' || aChar == '{' || aChar == '[') {
+                        bracketDepth++;
+                    } else if (aChar == ')' || aChar == '}' || aChar == ']') {
+                        bracketDepth--;
                     }
+                } catch (BadLocationException e) {
+                    log.warn(e);
                 }
-                if (hasValuableTokens && (token.isEOF() || (isDelimiter && tokenOffset >= currentPos) || tokenOffset > endPos)) {
-                    if (tokenOffset > endPos) {
-                        tokenOffset = endPos;
-                    }
-                    if (tokenOffset >= document.getLength()) {
-                        // Sometimes (e.g. when comment finishing script text)
-                        // last token offset is beyond document range
-                        tokenOffset = document.getLength();
-                    }
-                    assert (tokenOffset >= currentPos);
-                    try {
+            }
+            if (tokenType == SQLToken.T_BLOCK_HEADER) {
+                bracketDepth++;
+                hasBlocks = true;
+                hasBlockHeader = true;
+            } else if (tokenType == SQLToken.T_BLOCK_TOGGLE) {
+                String togglePattern;
+                try {
+                    togglePattern = document.get(tokenOffset, tokenLength);
+                } catch (BadLocationException e) {
+                    log.warn(e);
+                    togglePattern = "";
+                }
+                // Second toggle pattern must be the same as first one.
+                // Toggles can be nested (PostgreSQL) and we need to count only outer
+                if (bracketDepth == 1 && togglePattern.equals(blockTogglePattern)) {
+                    bracketDepth--;
+                    blockTogglePattern = null;
+                } else if (bracketDepth == 0 && blockTogglePattern == null) {
+                    bracketDepth++;
+                    blockTogglePattern = togglePattern;
+                } else {
+                    log.debug("Block toggle token inside another block. Can't process it");
+                }
+                hasBlocks = true;
+            } else if (tokenType == SQLToken.T_BLOCK_BEGIN) {
+                if (!hasBlockHeader) {
+                    bracketDepth++;
+                }
+                hasBlocks = true;
+            } else if (bracketDepth > 0 && tokenType == SQLToken.T_BLOCK_END) {
+                // Sometimes query contains END clause without BEGIN. E.g. CASE, IF, etc.
+                // This END doesn't mean block
+                if (hasBlocks) {
+                    bracketDepth--;
+                }
+                hasBlockHeader = false;
+            } else if (isDelimiter && bracketDepth > 0) {
+                // Delimiter in some brackets - ignore it
+                continue;
+            } else if (tokenType == SQLToken.T_SET_DELIMITER || tokenType == SQLToken.T_CONTROL) {
+                isDelimiter = true;
+                isControl = true;
+            } else if (tokenType == SQLToken.T_COMMENT) {
+                lastTokenLineFeeds = tokenLength < 2 ? 0 : countLineFeeds(document, tokenOffset + tokenLength - 2, 2);
+            }
 
-                        // remove leading spaces
-                        while (statementStart < tokenOffset && Character.isWhitespace(document.getChar(statementStart))) {
-                            statementStart++;
-                        }
-                        // remove trailing spaces
-/*
-                        while (statementStart < tokenOffset && Character.isWhitespace(document.getChar(tokenOffset - 1))) {
-                            tokenOffset--;
-                            tokenLength++;
-                        }
-*/
-                        if (tokenOffset == statementStart) {
-                            // Empty statement
-                            if (token.isEOF()) {
-                                return null;
-                            }
-                            statementStart = tokenOffset + tokenLength;
-                            continue;
-                        }
-                        String queryText = document.get(statementStart, tokenOffset - statementStart);
-                        queryText = SQLUtils.fixLineFeeds(queryText);
-
-                        if (isDelimiter && (keepDelimiters || (hasBlocks ? dialect.isDelimiterAfterBlock() : dialect.isDelimiterAfterQuery()))) {
-                            if (delimiterText != null && delimiterText.equals(SQLConstants.DEFAULT_STATEMENT_DELIMITER)) {
-                                // Add delimiter in the end of query. Do this only for semicolon delimiters
-                                // Quite dirty workaround needed for SQL server
-                                queryText += delimiterText;
-                            }
-                        }
-                        int queryEndPos = tokenOffset;
-                        if (tokenType == SQLToken.T_DELIMITER) {
-                            queryEndPos += tokenLength;
-                        }
-                        // make script line
-                        return new SQLQuery(
+            boolean cursorInsideToken = currentPos >= tokenOffset && currentPos < tokenOffset + tokenLength;
+            if (isControl && (scriptMode || cursorInsideToken)) {
+                // Control query
+                try {
+                    String controlText = document.get(tokenOffset, tokenLength);
+                    String commandId = null;
+                    if (token instanceof SQLControlToken) {
+                        commandId = ((SQLControlToken) token).getCommandId();
+                    }
+                    return new SQLControlCommand(
                             getDataSource(),
-                            queryText,
-                            statementStart,
-                                queryEndPos - statementStart);
-                    } catch (BadLocationException ex) {
-                        log.warn("Can't extract query", ex); //$NON-NLS-1$
-                        return null;
-                    }
-                }
-                if (isDelimiter) {
-                    statementStart = tokenOffset + tokenLength;
-                }
-                if (token.isEOF()) {
+                            syntaxManager,
+                            controlText.trim(),
+                            commandId,
+                            tokenOffset,
+                            tokenLength,
+                            tokenType == SQLToken.T_SET_DELIMITER);
+                } catch (BadLocationException e) {
+                    log.warn("Can't extract control statement", e); //$NON-NLS-1$
                     return null;
                 }
-                if (!hasValuableTokens && !token.isWhitespace() && !isControl) {
-                    if (tokenType == SQLToken.T_COMMENT) {
-                        hasValuableTokens = dialect.supportsCommentQuery();
-                    } else {
-                        hasValuableTokens = true;
-                    }
+            }
+            if (hasValuableTokens && (token.isEOF() || (isDelimiter && tokenOffset >= currentPos) || tokenOffset > endPos)) {
+                if (tokenOffset > endPos) {
+                    tokenOffset = endPos;
                 }
-            } finally {
-                if (!token.isWhitespace() && !token.isEOF()) {
-                    prevNotEmptyTokenType = tokenType;
+                if (tokenOffset >= document.getLength()) {
+                    // Sometimes (e.g. when comment finishing script text)
+                    // last token offset is beyond document range
+                    tokenOffset = document.getLength();
+                }
+                assert (tokenOffset >= currentPos);
+                try {
+
+                    // remove leading spaces
+                    while (statementStart < tokenOffset && Character.isWhitespace(document.getChar(statementStart))) {
+                        statementStart++;
+                    }
+                    // remove trailing spaces
+                    while (statementStart < tokenOffset && Character.isWhitespace(document.getChar(tokenOffset - 1))) {
+                        tokenOffset--;
+                        tokenLength++;
+                    }
+                    if (tokenOffset == statementStart) {
+                        // Empty statement
+                        if (token.isEOF()) {
+                            return null;
+                        }
+                        statementStart = tokenOffset + tokenLength;
+                        continue;
+                    }
+                    String queryText = document.get(statementStart, tokenOffset - statementStart);
+                    queryText = SQLUtils.fixLineFeeds(queryText);
+
+                    if (isDelimiter && (hasBlocks ? dialect.isDelimiterAfterBlock() : dialect.isDelimiterAfterQuery())) {
+                        if (delimiterText != null) {
+                            queryText += delimiterText;
+                        }
+                    }
+                    int queryEndPos = tokenOffset;
+                    if (tokenType == SQLToken.T_DELIMITER) {
+                        queryEndPos += tokenLength;
+                    }
+                    // make script line
+                    return new SQLQuery(
+                        getDataSource(),
+                        queryText.trim(),
+                        statementStart,
+                            queryEndPos - statementStart);
+                } catch (BadLocationException ex) {
+                    log.warn("Can't extract query", ex); //$NON-NLS-1$
+                    return null;
+                }
+            }
+            if (isDelimiter) {
+                statementStart = tokenOffset + tokenLength;
+            }
+            if (token.isEOF()) {
+                return null;
+            }
+            if (!hasValuableTokens && !token.isWhitespace() && !isControl) {
+                if (tokenType == SQLToken.T_COMMENT) {
+                    hasValuableTokens = dialect.supportsCommentQuery();
+                } else {
+                    hasValuableTokens = true;
                 }
             }
         }
@@ -939,19 +844,19 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
         return lfCount;
     }
 
-    protected List<SQLQueryParameter> parseParameters(IDocument document, int queryOffset, int queryLength) {
+    protected List<SQLQueryParameter> parseParameters(IDocument document, SQLQuery query) {
         final SQLDialect sqlDialect = getSQLDialect();
         boolean supportParamsInDDL = getActivePreferenceStore().getBoolean(ModelPreferences.SQL_PARAMETERS_IN_DDL_ENABLED);
         boolean execQuery = false;
         List<SQLQueryParameter> parameters = null;
-        ruleManager.setRange(document, queryOffset, queryLength);
+        ruleManager.setRange(document, query.getOffset(), query.getLength());
 
         boolean firstKeyword = true;
         for (;;) {
             IToken token = ruleManager.nextToken();
-            final int tokenOffset = ruleManager.getTokenOffset();
+            int tokenOffset = ruleManager.getTokenOffset();
             final int tokenLength = ruleManager.getTokenLength();
-            if (token.isEOF() || tokenOffset > queryOffset + queryLength) {
+            if (token.isEOF() || tokenOffset > query.getOffset() + query.getLength()) {
                 break;
             }
             // Handle only parameters which are not in SQL blocks
@@ -993,7 +898,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
                     SQLQueryParameter parameter = new SQLQueryParameter(
                         parameters.size(),
                         paramName,
-                        tokenOffset - queryOffset,
+                        tokenOffset - query.getOffset(),
                         tokenLength);
 
                     SQLQueryParameter previous = null;
@@ -1012,56 +917,7 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
                 }
             }
         }
-
-        if (syntaxManager.isVariablesEnabled()) {
-            try {
-                // Find variables in strings, comments, etc
-                // Use regex
-                String query = document.get(queryOffset, queryLength);
-
-                Matcher matcher = SQLVariableRule.VARIABLE_PATTERN.matcher(query);
-                int position = 0;
-                while (matcher.find(position)) {
-                    {
-                        int start = matcher.start();
-                        int orderPos = 0;
-                        SQLQueryParameter param = null;
-                        if (parameters != null) {
-                            for (SQLQueryParameter p : parameters) {
-                                if (p.getTokenOffset() == start) {
-                                    param = p;
-                                    break;
-                                } else if (p.getTokenOffset() < start) {
-                                    orderPos++;
-                                }
-                            }
-                        }
-
-                        if (param == null) {
-                            param = new SQLQueryParameter(orderPos, matcher.group(0), start, matcher.end() - matcher.start());
-                            if (parameters == null) {
-                                parameters = new ArrayList<>();
-                            }
-
-                            parameters.add(param.getOrdinalPosition(), param);
-                        }
-                    }
-                    position = matcher.end();
-                }
-            } catch (BadLocationException e) {
-                log.warn("Error parsing variables", e);
-            }
-        }
-
         return parameters;
-    }
-
-    protected List<SQLQueryParameter> parseParameters(IDocument document, SQLQuery query) {
-        return parseParameters(document, query.getOffset(), query.getLength());
-    }
-
-    protected List<SQLQueryParameter> parseParameters(String query) {
-        return parseParameters(new Document(query), 0, query.length());
     }
 
     public boolean isDisposed()
@@ -1162,10 +1018,6 @@ public abstract class SQLEditorBase extends BaseTextEditor implements IErrorVisu
             log.warn("Error positioning on query error", e);
             return false;
         }
-    }
-
-    public boolean isFoldingEnabled() {
-        return getActivePreferenceStore().getBoolean(SQLPreferenceConstants.FOLDING_ENABLED);
     }
 
 }

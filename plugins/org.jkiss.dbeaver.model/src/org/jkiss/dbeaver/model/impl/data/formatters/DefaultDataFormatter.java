@@ -17,7 +17,6 @@
 package org.jkiss.dbeaver.model.impl.data.formatters;
 
 import org.jkiss.dbeaver.model.data.DBDDataFormatter;
-import org.jkiss.dbeaver.model.struct.DBSTypedObject;
 
 import java.util.Locale;
 import java.util.Map;
@@ -31,7 +30,7 @@ public class DefaultDataFormatter implements DBDDataFormatter {
     }
 
     @Override
-    public void init(DBSTypedObject type, Locale locale, Map<Object, Object> properties)
+    public void init(Locale locale, Map<Object, Object> properties)
     {
     }
 

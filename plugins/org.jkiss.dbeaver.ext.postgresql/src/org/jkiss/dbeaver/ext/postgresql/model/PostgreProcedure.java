@@ -31,7 +31,6 @@ import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.rdb.DBSProcedureParameterKind;
 import org.jkiss.dbeaver.model.struct.rdb.DBSProcedureType;
-import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
@@ -40,7 +39,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * PostgreProcedure
@@ -207,7 +205,6 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
     }
 
     @Override
-    @Property(order = 5)
     public long getObjectId() {
         return oid;
     }
@@ -215,7 +212,7 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
     @Override
     public DBSProcedureType getProcedureType()
     {
-        return DBSProcedureType.FUNCTION;
+        return DBSProcedureType.PROCEDURE;
     }
 
     @Property(hidden = true, editable = true, updatable = true, order = -1)
@@ -254,38 +251,22 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
 
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException
     {
-        if (CommonUtils.getOption(options, OPTION_DEBUGGER_SOURCE)) {
-            if (procSrc == null) {
+        if (body == null) {
+            if (oid == 0 || isAggregate) {
+                // No OID so let's use old (bad) way
+                body = this.procSrc;
+            } else {
                 try (JDBCSession session = DBUtils.openMetaSession(monitor, getDataSource(), "Read procedure body")) {
-                    procSrc = JDBCUtils.queryString(session, "SELECT prosrc FROM pg_proc where oid = ?", getObjectId());
+                    body = JDBCUtils.queryString(session, "SELECT pg_get_functiondef(" + getObjectId() + ")");
                 } catch (SQLException e) {
-                    throw new DBException("Error reading procedure body", e);
-                }
-            }
-            return procSrc;
-        } else {
-            if (body == null) {
-                if (!isPersisted()) {
-                    body = "CREATE OR REPLACE FUNCTION " + getFullQualifiedSignature() + GeneralUtils.getDefaultLineSeparator() +
-                        "RETURNS INT" + GeneralUtils.getDefaultLineSeparator() +
-                        "LANGUAGE sql " + GeneralUtils.getDefaultLineSeparator() +
-                        "AS $function$ " + GeneralUtils.getDefaultLineSeparator() + " $function$";
-                } else if (oid == 0 || isAggregate) {
-                    // No OID so let's use old (bad) way
-                    body = this.procSrc;
-                } else {
-                    try (JDBCSession session = DBUtils.openMetaSession(monitor, getDataSource(), "Read procedure body")) {
-                        body = JDBCUtils.queryString(session, "SELECT pg_get_functiondef(" + getObjectId() + ")");
-                    } catch (SQLException e) {
-                        if (!CommonUtils.isEmpty(this.procSrc)) {
-                            log.debug("Error reading procedure body", e);
-                            // At least we have it
-                            body = this.procSrc;
-                        } else {
-                            throw new DBException("Error reading procedure body", e);
-                        }
+                    if (!CommonUtils.isEmpty(this.procSrc)) {
+                        log.debug("Error reading procedure body", e);
+                        // At least we have it
+                        body = this.procSrc;
+                    } else {
+                        throw new DBException("Error reading procedure body", e);
                     }
                 }
             }
@@ -376,9 +357,7 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
             paramsSignature.append("(");
             boolean hasParam = false;
             for (PostgreProcedureParameter param : params) {
-                if (param.getParameterKind() != DBSProcedureParameterKind.IN &&
-                    param.getParameterKind() != DBSProcedureParameterKind.INOUT)
-                {
+                if (param.getParameterKind() == DBSProcedureParameterKind.OUT) {
                     continue;
                 }
                 if (hasParam) paramsSignature.append(',');
@@ -387,7 +366,7 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
                 final PostgreSchema typeContainer = dataType.getParentObject();
                 if (typeContainer == null ||
                     typeContainer == getContainer() ||
-                    typeContainer.isCatalogSchema())
+                    typeContainer.getName().equals(PostgreConstants.CATALOG_SCHEMA_NAME))
                 {
                     paramsSignature.append(dataType.getName());
                 } else {
@@ -420,7 +399,6 @@ public class PostgreProcedure extends AbstractProcedure<PostgreDataSource, Postg
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) throws DBException {
         body = null;
-        procSrc = null;
         return this;
     }
 

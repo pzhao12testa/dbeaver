@@ -38,7 +38,6 @@ import org.jkiss.dbeaver.model.struct.DBSObject;
 
 import java.sql.Types;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Oracle table column manager
@@ -73,7 +72,7 @@ public class OracleTableColumnManager extends SQLTableColumnManager<OracleTableC
     }
 
     @Override
-    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command, Map<String, Object> options)
+    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command)
     {
         final OracleTableColumn column = command.getObject();
         boolean hasComment = command.getProperty("comment") != null;
@@ -81,7 +80,7 @@ public class OracleTableColumnManager extends SQLTableColumnManager<OracleTableC
             actionList.add(new SQLDatabasePersistAction(
                 "Modify column",
                 "ALTER TABLE " + column.getTable().getFullyQualifiedName(DBPEvaluationContext.DDL) + //$NON-NLS-1$
-                " MODIFY " + getNestedDeclaration(column.getTable(), command, options))); //$NON-NLS-1$
+                " MODIFY " + getNestedDeclaration(column.getTable(), command))); //$NON-NLS-1$
         }
         if (hasComment) {
             actionList.add(new SQLDatabasePersistAction(
@@ -97,7 +96,7 @@ public class OracleTableColumnManager extends SQLTableColumnManager<OracleTableC
     }
 
     @Override
-    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command, Map<String, Object> options)
+    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command)
     {
         final OracleTableColumn column = command.getObject();
 

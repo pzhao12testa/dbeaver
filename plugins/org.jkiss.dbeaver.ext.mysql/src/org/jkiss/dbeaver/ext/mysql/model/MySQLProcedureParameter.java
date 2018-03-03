@@ -38,8 +38,8 @@ public class MySQLProcedureParameter extends JDBCAttribute implements DBSProcedu
             int valueType,
             int ordinalPosition,
             long columnSize,
-            Integer scale,
-            Integer precision,
+            int scale,
+            int precision,
             boolean notNull,
             DBSProcedureParameterKind parameterKind)
     {

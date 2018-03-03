@@ -39,7 +39,6 @@ public class PrefPageOracle extends TargetPrefPage
     private Text explainTableText;
     private Button rowidSupportCheck;
     private Button enableDbmsOuputCheck;
-    private Button readAllSynonymsCheck;
 
     public PrefPageOracle()
     {
@@ -54,8 +53,7 @@ public class PrefPageOracle extends TargetPrefPage
         return
             store.contains(OracleConstants.PREF_EXPLAIN_TABLE_NAME) ||
             store.contains(OracleConstants.PREF_SUPPORT_ROWID) ||
-            store.contains(OracleConstants.PREF_DBMS_OUTPUT) ||
-            store.contains(OracleConstants.PREF_DBMS_READ_ALL_SYNONYMS)
+            store.contains(OracleConstants.PREF_DBMS_OUTPUT)
             ;
     }
 
@@ -86,7 +84,6 @@ public class PrefPageOracle extends TargetPrefPage
             Group planGroup = UIUtils.createControlGroup(composite, "Misc", 2, GridData.FILL_HORIZONTAL, 0);
             rowidSupportCheck = UIUtils.createLabelCheckbox(planGroup, "Use ROWID to identify rows", true);
             enableDbmsOuputCheck = UIUtils.createLabelCheckbox(planGroup, "Enable DBMS Output", true);
-            readAllSynonymsCheck = UIUtils.createLabelCheckbox(planGroup, "Read all synonyms", "If unchecked Java classes and package bodies will be skipped", true);
         }
 
         return composite;
@@ -98,7 +95,6 @@ public class PrefPageOracle extends TargetPrefPage
         explainTableText.setText(store.getString(OracleConstants.PREF_EXPLAIN_TABLE_NAME));
         rowidSupportCheck.setSelection(store.getBoolean(OracleConstants.PREF_SUPPORT_ROWID));
         enableDbmsOuputCheck.setSelection(store.getBoolean(OracleConstants.PREF_DBMS_OUTPUT));
-        readAllSynonymsCheck.setSelection(store.getBoolean(OracleConstants.PREF_DBMS_READ_ALL_SYNONYMS));
     }
 
     @Override
@@ -107,7 +103,6 @@ public class PrefPageOracle extends TargetPrefPage
         store.setValue(OracleConstants.PREF_EXPLAIN_TABLE_NAME, explainTableText.getText());
         store.setValue(OracleConstants.PREF_SUPPORT_ROWID, rowidSupportCheck.getSelection());
         store.setValue(OracleConstants.PREF_DBMS_OUTPUT, enableDbmsOuputCheck.getSelection());
-        store.setValue(OracleConstants.PREF_DBMS_READ_ALL_SYNONYMS, readAllSynonymsCheck.getSelection());
         PrefUtils.savePreferenceStore(store);
     }
 
@@ -117,7 +112,6 @@ public class PrefPageOracle extends TargetPrefPage
         store.setToDefault(OracleConstants.PREF_EXPLAIN_TABLE_NAME);
         store.setToDefault(OracleConstants.PREF_SUPPORT_ROWID);
         store.setToDefault(OracleConstants.PREF_DBMS_OUTPUT);
-        store.setToDefault(OracleConstants.PREF_DBMS_READ_ALL_SYNONYMS);
     }
 
     @Override

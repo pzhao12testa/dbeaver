@@ -51,9 +51,6 @@ public interface DBPDriver extends DBPNamedObject
     String getId();
 
     @NotNull
-    String getProviderId();
-
-    @NotNull
     String getFullName();
 
     @Nullable

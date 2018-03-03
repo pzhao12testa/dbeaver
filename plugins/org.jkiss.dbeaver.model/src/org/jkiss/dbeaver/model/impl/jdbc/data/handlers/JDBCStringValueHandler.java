@@ -47,8 +47,7 @@ public class JDBCStringValueHandler extends JDBCAbstractValueHandler {
         int index)
         throws SQLException
     {
-        // Use getObject instead of getString because sometimes CHAR/VARCHAR holds something specific. E.g. FOR BIT DATA
-        return resultSet.getObject(index);
+        return resultSet.getString(index);
     }
 
     @Override

@@ -1,7 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-         xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.jkiss.dbeaver</groupId>
     <artifactId>dbeaver</artifactId>
@@ -9,39 +6,31 @@
     <packaging>pom</packaging>
 
     <properties>
-        <dbeaver-version>4.3.5</dbeaver-version>
+        <dbeaver-version>4.1.3</dbeaver-version>
         <dbeaver-product>DBeaver</dbeaver-product>
         <tycho-version>1.0.0</tycho-version>
         <tycho-versions-version>0.26.0</tycho-versions-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>yyyyMMddHHmm</maven.build.timestamp.format>
-        <eclipse-p2-repo.url>http://download.eclipse.org/releases/oxygen/</eclipse-p2-repo.url>
+        <eclipse-p2-repo.url>http://download.eclipse.org/releases/neon/</eclipse-p2-repo.url>
         <local-p2-repo.url>https://dbeaver.jkiss.org/eclipse-repo</local-p2-repo.url>
     </properties>
 
     <modules>
-        <module>bundles/org.jkiss.utils</module>
-        <module>bundles/org.jkiss.wmi</module>
+        <module>modules/org.jkiss.utils</module>
+        <module>modules/org.jkiss.wmi</module>
 
-        <module>plugins/org.jkiss.dbeaver.runtime.ide.core</module>
-        <module>plugins/org.jkiss.dbeaver.runtime.ide.ui</module>
         <module>plugins/org.jkiss.dbeaver.core</module>
-        <module>plugins/org.jkiss.dbeaver.ui</module>
-
-        <module>plugins/org.jkiss.dbeaver.debug.core</module>
-        <module>plugins/org.jkiss.dbeaver.debug.ui</module>
-
         <module>plugins/org.jkiss.dbeaver.core.application</module>
         <module>plugins/org.jkiss.dbeaver.core.eclipse</module>
         <module>plugins/org.jkiss.dbeaver.ext.db2</module>
         <module>plugins/org.jkiss.dbeaver.ext.derby</module>
         <module>plugins/org.jkiss.dbeaver.ext.erd</module>
-        <module>plugins/org.jkiss.dbeaver.ext.ui.locks</module>
+		<module>plugins/org.jkiss.dbeaver.ext.ui.locks</module>
         <module>plugins/org.jkiss.dbeaver.ext.firebird</module>
         <module>plugins/org.jkiss.dbeaver.ext.generic</module>
         <module>plugins/org.jkiss.dbeaver.ext.import-config</module>
         <module>plugins/org.jkiss.dbeaver.ext.h2</module>
-        <module>plugins/org.jkiss.dbeaver.ext.hana</module>
         <module>plugins/org.jkiss.dbeaver.ext.hsqldb</module>
         <module>plugins/org.jkiss.dbeaver.ext.informix</module>
         <module>plugins/org.jkiss.dbeaver.ext.mssql</module>
@@ -49,49 +38,31 @@
         <module>plugins/org.jkiss.dbeaver.ext.netezza</module>
         <module>plugins/org.jkiss.dbeaver.ext.oracle</module>
         <module>plugins/org.jkiss.dbeaver.ext.phoenix</module>
-
         <module>plugins/org.jkiss.dbeaver.ext.postgresql</module>
-        <module>plugins/org.jkiss.dbeaver.ext.postgresql.debug.core</module>
-        <module>plugins/org.jkiss.dbeaver.ext.postgresql.debug.ui</module>
-
         <module>plugins/org.jkiss.dbeaver.ext.sqlite</module>
         <module>plugins/org.jkiss.dbeaver.ext.vertica</module>
         <module>plugins/org.jkiss.dbeaver.ext.teradata</module>
         <module>plugins/org.jkiss.dbeaver.ext.exasol</module>
         <module>plugins/org.jkiss.dbeaver.ext.wmi</module>
-        <module>plugins/org.jkiss.dbeaver.ext.sample.database</module>
-        <module>plugins/org.jkiss.dbeaver.ext.ui.svg</module>
-        <module>plugins/org.jkiss.dbeaver.ext.mockdata</module>
-        <module>plugins/org.jkiss.dbeaver.data.office</module>
-        <module>plugins/org.jkiss.dbeaver.data.gis</module>
+		<module>plugins/org.jkiss.dbeaver.data.office</module>
         <module>plugins/org.jkiss.dbeaver.model</module>
+        <module>plugins/org.jkiss.dbeaver.test</module>
 
         <module>features/org.jkiss.dbeaver.core.feature</module>
-        <module>features/org.jkiss.dbeaver.debug.feature</module>
         <module>features/org.jkiss.dbeaver.ext.db2.feature</module>
         <module>features/org.jkiss.dbeaver.ext.generic.feature</module>
         <module>features/org.jkiss.dbeaver.ext.mysql.feature</module>
         <module>features/org.jkiss.dbeaver.ext.oracle.feature</module>
         <module>features/org.jkiss.dbeaver.ext.wmi.feature</module>
         <module>features/org.jkiss.dbeaver.ext.exasol.feature</module>
-        <module>features/org.jkiss.dbeaver.ext.office.feature</module>
-        <module>features/org.jkiss.dbeaver.ext.ui.svg.feature</module>
+		<module>features/org.jkiss.dbeaver.ext.office.feature</module>
         <module>features/org.jkiss.dbeaver.rcp.feature</module>
         <module>features/org.jkiss.dbeaver.runtime.feature</module>
         <module>features/org.jkiss.dbeaver.standalone.feature</module>
         <module>features/org.jkiss.dbeaver.ce.feature</module>		
-        
-        <!-- DBeaver NLS -->
-        <module>nls</module>
 
-        <!-- Products -->
+        <module>product/updateSite</module>
         <module>product/standalone</module>
-        <module>product/repositories</module>
-
-        <!-- Test -->
-        <module>plugins/org.jkiss.dbeaver.test</module>
-        <module>tests/org.jkiss.dbeaver.runtime.ide.core.tests</module>
-
     </modules>
 
     <repositories>
@@ -111,6 +82,7 @@
         <plugins>
 
             <!-- Tycho build -->
+
             <plugin>
                 <groupId>org.eclipse.tycho</groupId>
                 <artifactId>target-platform-configuration</artifactId>
@@ -142,13 +114,11 @@
                             <ws>cocoa</ws>
                             <arch>x86_64</arch>
                         </environment>
-<!--
                         <environment>
                             <os>solaris</os>
                             <ws>gtk</ws>
                             <arch>x86_64</arch>
                         </environment>
--->
                     </environments>
                 </configuration>
             </plugin>
@@ -174,8 +144,8 @@
                 <artifactId>tycho-compiler-plugin</artifactId>
                 <version>${tycho-version}</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <compilerArgument>-warn:+discouraged,forbidden</compilerArgument>
                 </configuration>
             </plugin>
@@ -230,3 +200,4 @@
         </plugins>
     </build>
 </project>
+

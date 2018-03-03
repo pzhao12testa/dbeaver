@@ -75,6 +75,7 @@ public class MySQLConnectionPage extends ConnectionPageAbstract implements IComp
             public void modifyText(ModifyEvent e)
             {
                 if (activated) {
+                    saveSettings(site.getActiveDataSource());
                     site.updateButtons();
                 }
             }

@@ -52,8 +52,6 @@ public interface IGridContentProvider extends IContentProvider {
 
     int getColumnAlign(@Nullable Object element);
 
-    boolean isElementSupportsFilter(@Nullable Object element);
-
     /**
      *
      * @param cellText    pre-rendered cell text. Used for cache purposes.

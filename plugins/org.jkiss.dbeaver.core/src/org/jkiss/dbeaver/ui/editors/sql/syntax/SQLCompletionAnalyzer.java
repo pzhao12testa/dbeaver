@@ -16,22 +16,26 @@
  */
 package org.jkiss.dbeaver.ui.editors.sql.syntax;
 
+import org.eclipse.jface.text.contentassist.ContextInformation;
 import org.eclipse.swt.graphics.Image;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
+import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.impl.DBObjectNameCaseTransformer;
 import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
-import org.jkiss.dbeaver.model.sql.*;
+import org.jkiss.dbeaver.model.sql.SQLDataSource;
+import org.jkiss.dbeaver.model.sql.SQLDialect;
+import org.jkiss.dbeaver.model.sql.SQLScriptElement;
+import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.dbeaver.model.struct.*;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.TextUtils;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
 import org.jkiss.dbeaver.ui.editors.sql.SQLPreferenceConstants;
-import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.*;
@@ -88,12 +92,6 @@ class SQLCompletionAnalyzer
                 if (request.queryType == SQLCompletionProcessor.QueryType.COLUMN && dataSource instanceof DBSObjectContainer) {
                     // Try to detect current table
                     rootObject = getTableFromAlias((DBSObjectContainer)dataSource, null);
-                    if (rootObject instanceof DBSEntity && SQLConstants.KEYWORD_ON.equals(request.wordDetector.getPrevKeyWord())) {
-                        // Join?
-                        if (makeJoinColumnProposals((DBSObjectContainer)dataSource, (DBSEntity)rootObject)) {
-                            return;
-                        }
-                    }
                 } else if (dataSource instanceof DBSObjectContainer) {
                     // Try to get from active object
                     DBSObject selectedObject = DBUtils.getActiveInstanceObject(dataSource);
@@ -106,13 +104,6 @@ class SQLCompletionAnalyzer
                 }
                 if (rootObject != null) {
                     makeProposalsFromChildren(rootObject, null);
-                }
-                if (request.queryType == SQLCompletionProcessor.QueryType.JOIN && !request.proposals.isEmpty() && dataSource instanceof DBSObjectContainer) {
-                    // Filter out non-joinable tables
-                    DBSObject leftTable = getTableFromAlias((DBSObjectContainer) dataSource, null);
-                    if (leftTable instanceof DBSEntity) {
-                        filterNonJoinableProposals((DBSEntity)leftTable);
-                    }
                 }
             } else {
                 DBSObject rootObject = null;
@@ -138,73 +129,6 @@ class SQLCompletionAnalyzer
         } else {
             // Get list of sub-objects (filtered by wordPart)
             makeDataSourceProposals();
-        }
-    }
-
-    private boolean makeJoinColumnProposals(DBSObjectContainer sc, DBSEntity leftTable) {
-        SQLWordPartDetector joinTableDetector = new SQLWordPartDetector(
-            request.editor.getDocument(),
-            request.editor.getSyntaxManager(),
-            request.wordDetector.getStartOffset(),
-            2);
-        List<String> prevWords = joinTableDetector.getPrevWords();
-
-        if (!CommonUtils.isEmpty(prevWords)) {
-            DBPDataSource dataSource = request.editor.getDataSource();
-            SQLDialect sqlDialect = SQLUtils.getDialectFromDataSource(dataSource);
-            String rightTableName = prevWords.get(0);
-            String[] allNames = SQLUtils.splitFullIdentifier(
-                rightTableName,
-                sqlDialect.getCatalogSeparator(),
-                sqlDialect.getIdentifierQuoteStrings(),
-                false);
-            DBSObject rightTable = findObjectByFQN(sc, dataSource, Arrays.asList(allNames));
-            if (rightTable instanceof DBSEntity) {
-                try {
-                    String joinCriteria = SQLUtils.generateTableJoin(monitor, leftTable, leftTable.getName(), (DBSEntity) rightTable, rightTable.getName());
-                    request.proposals.add(createCompletionProposal(request, joinCriteria, joinCriteria, DBPKeywordType.OTHER, "Join condition"));
-                    return true;
-                } catch (DBException e) {
-                    log.error("Error generating joinb condition", e);
-                }
-            }
-        }
-        return false;
-    }
-
-    private void filterNonJoinableProposals(DBSEntity leftTable) {
-        // Remove all table proposals which don't have FKs between them and leftTable
-        List<SQLCompletionProposal> proposals = request.proposals;
-        List<SQLCompletionProposal> joinableProposals = new ArrayList<>();
-        for (SQLCompletionProposal proposal : proposals) {
-            if (proposal.getObject() instanceof DBSEntity) {
-                DBSEntity rightTable = (DBSEntity) proposal.getObject();
-                if (tableHaveJoins(rightTable, leftTable) || tableHaveJoins(leftTable, rightTable)) {
-                    proposal.setReplacementAfter(" ON");
-                    joinableProposals.add(proposal);
-                }
-            }
-        }
-        if (!joinableProposals.isEmpty()) {
-            request.proposals.clear();
-            request.proposals.addAll(joinableProposals);
-        }
-    }
-
-    private boolean tableHaveJoins(DBSEntity table1, DBSEntity table2) {
-        try {
-            Collection<? extends DBSEntityAssociation> associations = table1.getAssociations(monitor);
-            if (!CommonUtils.isEmpty(associations)) {
-                for (DBSEntityAssociation fk : associations) {
-                    if (fk.getAssociatedEntity() == table2) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        } catch (DBException e) {
-            log.error(e);
-            return false;
         }
     }
 
@@ -355,7 +279,7 @@ class SQLCompletionAnalyzer
         }
 
         final List<String> nameList = new ArrayList<>();
-        SQLDialect sqlDialect = SQLUtils.getDialectFromDataSource(dataSource);
+        SQLDialect sqlDialect = ((SQLDataSource) dataSource).getSQLDialect();
         {
             // Regex matching MUST be very fast.
             // Otherwise UI will freeze during SQL typing.
@@ -373,13 +297,11 @@ class SQLCompletionAnalyzer
 
             String[][] quoteStrings = sqlDialect.getIdentifierQuoteStrings();
             StringBuilder quotes = new StringBuilder();
-            if (quoteStrings != null) {
-                for (String[] quotePair : quoteStrings) {
-                    if (quotes.indexOf(quotePair[0]) == -1) quotes.append('\\').append(quotePair[0]);
-                    if (quotes.indexOf(quotePair[1]) == -1) quotes.append('\\').append(quotePair[1]);
-                }
+            for (String[] quotePair : quoteStrings) {
+                if (quotes.indexOf(quotePair[0]) == -1) quotes.append('\\').append(quotePair[0]);
+                if (quotes.indexOf(quotePair[1]) == -1) quotes.append('\\').append(quotePair[1]);
             }
-            String tableNamePattern = "([\\p{L}0-9_$\\.\\-" + quotes.toString() + "]+)";
+            String tableNamePattern = "([\\w_$\\.\\-" + quotes.toString() + "]+)";
             String structNamePattern;
             if (CommonUtils.isEmpty(token)) {
                 structNamePattern = "(?:from|update|join|into)\\s*" + tableNamePattern;
@@ -401,49 +323,29 @@ class SQLCompletionAnalyzer
                 for (int i = 1; i <= groupCount; i++) {
                     String group = matcher.group(i);
                     if (!CommonUtils.isEmpty(group)) {
-                        String[] allNames = SQLUtils.splitFullIdentifier(group, catalogSeparator, quoteStrings, false);
+                        String[] allNames = SQLUtils.splitFullIdentifier(group, catalogSeparator, quoteStrings);
                         Collections.addAll(nameList, allNames);
                     }
                 }
             }
         }
 
-        return findObjectByFQN(sc, dataSource, nameList);
-    }
-
-    @Nullable
-    private DBSObject findObjectByFQN(DBSObjectContainer sc, DBPDataSource dataSource, List<String> nameList) {
         if (nameList.isEmpty()) {
             return null;
         }
-        {
-            List<String> unquotedNames = new ArrayList<>(nameList.size());
-            for (String name : nameList) {
-                unquotedNames.add(DBUtils.getUnQuotedIdentifier(dataSource, name));
-            }
 
-            DBSObject result = findObjectByPath(sc, unquotedNames);
-            if (result != null) {
-                return result;
+        // Fix names (convert case or remove quotes)
+        for (int i = 0; i < nameList.size(); i++) {
+            String name = nameList.get(i);
+            String unquotedName = DBUtils.getUnQuotedIdentifier(dataSource, name);
+            if (!unquotedName.equals(name)) {
+                name = unquotedName;
+            } else {
+                name = DBObjectNameCaseTransformer.transformName(sc.getDataSource(), name);
             }
+            nameList.set(i, name);
         }
-        {
-            // Fix names (convert case or remove quotes)
-            for (int i = 0; i < nameList.size(); i++) {
-                String name = nameList.get(i);
-                String unquotedName = DBUtils.getUnQuotedIdentifier(dataSource, name);
-                if (!unquotedName.equals(name)) {
-                    name = unquotedName;
-                } else {
-                    name = DBObjectNameCaseTransformer.transformName(sc.getDataSource(), name);
-                }
-                nameList.set(i, name);
-            }
-            return findObjectByPath(sc, nameList);
-        }
-    }
 
-    private DBSObject findObjectByPath(DBSObjectContainer sc, List<String> nameList) {
         try {
             DBSObject childObject = null;
             while (childObject == null) {
@@ -553,18 +455,26 @@ class SQLCompletionAnalyzer
                 } else if (!matchedObjects.isEmpty()) {
                     if (startPart != null) {
                         if (simpleMode) {
-                            matchedObjects.sort(Comparator.comparing(DBPNamedObject::getName));
-                        } else {
-                            matchedObjects.sort((o1, o2) -> {
-                                int score1 = scoredMatches.get(o1.getName());
-                                int score2 = scoredMatches.get(o2.getName());
-                                if (score1 == score2) {
-                                    if (o1 instanceof DBSAttributeBase) {
-                                        return ((DBSAttributeBase) o1).getOrdinalPosition() - ((DBSAttributeBase) o2).getOrdinalPosition();
-                                    }
+                            Collections.sort(matchedObjects, new Comparator<DBSObject>() {
+                                @Override
+                                public int compare(DBSObject o1, DBSObject o2) {
                                     return o1.getName().compareTo(o2.getName());
                                 }
-                                return score2 - score1;
+                            });
+                        } else {
+                            Collections.sort(matchedObjects, new Comparator<DBSObject>() {
+                                @Override
+                                public int compare(DBSObject o1, DBSObject o2) {
+                                    int score1 = scoredMatches.get(o1.getName());
+                                    int score2 = scoredMatches.get(o2.getName());
+                                    if (score1 == score2) {
+                                        if (o1 instanceof DBSAttributeBase) {
+                                            return ((DBSAttributeBase) o1).getOrdinalPosition() - ((DBSAttributeBase) o2).getOrdinalPosition();
+                                        }
+                                        return o1.getName().compareTo(o2.getName());
+                                    }
+                                    return score2 - score1;
+                                }
                             });
                         }
                     }
@@ -603,7 +513,7 @@ class SQLCompletionAnalyzer
 
     private SQLCompletionProposal makeProposalsFromObject(DBSObject object)
     {
-        DBNNode node = NavigatorUtils.getNodeByObject(monitor, object, false);
+        DBNNode node = DBeaverCore.getInstance().getNavigatorModel().getNodeByObject(monitor, object, false);
         return makeProposalsFromObject(object, node == null ? null : node.getNodeIconDefault());
     }
 
@@ -617,12 +527,10 @@ class SQLCompletionAnalyzer
         String replaceString = null;
         DBPDataSource dataSource = request.editor.getDataSource();
         if (dataSource != null) {
-            DBPPreferenceStore prefs = request.editor.getActivePreferenceStore();
-
             // If we replace short name with referenced object
             // and current active schema (catalog) is not this object's container then
             // replace with full qualified name
-            if (!prefs.getBoolean(SQLPreferenceConstants.PROPOSAL_SHORT_NAME) && object instanceof DBSObjectReference) {
+            if (!request.editor.getActivePreferenceStore().getBoolean(SQLPreferenceConstants.PROPOSAL_SHORT_NAME) && object instanceof DBSObjectReference) {
                 if (request.wordDetector.getFullWord().indexOf(request.editor.getSyntaxManager().getStructSeparator()) == -1) {
                     DBSObjectReference structObject = (DBSObjectReference) object;
                     if (structObject.getContainer() != null) {
@@ -630,7 +538,7 @@ class SQLCompletionAnalyzer
                         if (selectedObject != structObject.getContainer()) {
                             replaceString = DBUtils.getFullQualifiedName(
                                 dataSource,
-                                structObject.getContainer() instanceof DBPDataSource ? null : structObject.getContainer(),
+                                structObject.getContainer(),
                                 object);
                             isSingleObject = false;
                         }
@@ -638,11 +546,7 @@ class SQLCompletionAnalyzer
                 }
             }
             if (replaceString == null) {
-                if (prefs.getBoolean(SQLPreferenceConstants.PROPOSAL_ALWAYS_FQ) && object instanceof DBPQualifiedObject) {
-                    replaceString = ((DBPQualifiedObject)object).getFullyQualifiedName(DBPEvaluationContext.DML);
-                } else {
-                    replaceString = DBUtils.getQuotedIdentifier(dataSource, object.getName());
-                }
+                replaceString = DBUtils.getQuotedIdentifier(dataSource, object.getName());
             }
         } else {
             replaceString = DBUtils.getObjectShortName(object);
@@ -674,8 +578,7 @@ class SQLCompletionAnalyzer
         if (dataSource != null) {
             if (isObject) {
                 // Escape replace string if required
-                // FIXME: do not escape! it may (will) escape identifiers twice
-                //replaceString = DBUtils.getQuotedIdentifier(dataSource, replaceString);
+                replaceString = DBUtils.getQuotedIdentifier(dataSource, replaceString);
             }
         }
 
@@ -693,14 +596,9 @@ class SQLCompletionAnalyzer
                 default:
                     // Do not convert case if we got it directly from object
                     if (!isObject) {
-                        DBPKeywordType keywordType = request.editor.getSyntaxManager().getDialect().getKeywordType(replaceString);
-                        if (keywordType == DBPKeywordType.KEYWORD) {
-                            replaceString = request.editor.getSyntaxManager().getKeywordCase().transform(replaceString);
-                        } else {
-                            DBPIdentifierCase convertCase = dataSource instanceof SQLDataSource ?
-                                ((SQLDataSource) dataSource).getSQLDialect().storesUnquotedCase() : DBPIdentifierCase.MIXED;
-                            replaceString = convertCase.transform(replaceString);
-                        }
+                        DBPIdentifierCase convertCase = dataSource instanceof SQLDataSource ?
+                            ((SQLDataSource) dataSource).getSQLDialect().storesUnquotedCase() : DBPIdentifierCase.MIXED;
+                        replaceString = convertCase.transform(replaceString);
                     }
                     break;
             }
@@ -714,7 +612,7 @@ class SQLCompletionAnalyzer
             replaceString.length(), //cursorPosition the position of the cursor following the insert
                                 // relative to replacementOffset
             img, //image to display
-            null,//new ContextInformation(img, displayString, displayString), //the context information associated with this proposal
+            new ContextInformation(img, displayString, displayString), //the context information associated with this proposal
             proposalType,
             null,
             object);
@@ -733,7 +631,7 @@ class SQLCompletionAnalyzer
             replaceString, // replacementString
             replaceString.length(), //cursorPosition the position of the cursor following the insert
             null, //image to display
-            null,//new ContextInformation(null, displayString, displayString), //the context information associated with this proposal
+            new ContextInformation(null, displayString, displayString), //the context information associated with this proposal
             proposalType,
             description,
             null);

@@ -63,7 +63,7 @@ public class GenericTableManager extends SQLTableManager<GenericTable, GenericSt
     {
         String tableName = "";
         try {
-            tableName = getNewChildName(monitor, parent);
+            tableName = getTableName(monitor, parent);
         } catch (DBException e) {
             log.error(e);
         }

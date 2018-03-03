@@ -19,7 +19,10 @@ package org.jkiss.dbeaver.ext.exasol.model;
 
 import java.sql.ResultSet;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
@@ -284,7 +287,7 @@ public class ExasolSchema extends ExasolGlobalObject implements DBSSchema, DBPNa
     }
 
 	@Override
-	public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options)
+	public String getObjectDefinitionText(DBRProgressMonitor monitor)
 			throws DBException
 	{
 		return ExasolUtils.generateDDLforSchema(monitor, this);

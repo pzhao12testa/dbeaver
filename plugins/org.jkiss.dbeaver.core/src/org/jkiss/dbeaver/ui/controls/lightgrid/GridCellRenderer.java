@@ -31,8 +31,8 @@ import org.jkiss.dbeaver.ui.UIUtils;
  */
 class GridCellRenderer extends AbstractRenderer
 {
-    private static final int LEFT_MARGIN = 6;
-    private static final int RIGHT_MARGIN = 6;
+    private static final int LEFT_MARGIN = 4;
+    private static final int RIGHT_MARGIN = 4;
     private static final int TOP_MARGIN = 0;
 
     private static final int TEXT_TOP_MARGIN = 1;
@@ -54,7 +54,7 @@ class GridCellRenderer extends AbstractRenderer
     {
         boolean drawBackground = true;
 
-        //if (grid.isEnabled()) {
+        if (grid.isEnabled()) {
             Color back = grid.getCellBackground(col, row, selected);
 
             if (back != null) {
@@ -62,9 +62,9 @@ class GridCellRenderer extends AbstractRenderer
             } else {
                 drawBackground = false;
             }
-        /*} else {
+        } else {
             grid.setDefaultBackground(gc);
-        }*/
+        }
         gc.setForeground(grid.getCellForeground(col, row, selected));
 
         if (drawBackground) {
@@ -75,6 +75,17 @@ class GridCellRenderer extends AbstractRenderer
         final int state = grid.getContentProvider().getCellState(col, row, text);
         int x = LEFT_MARGIN;
 
+/*
+        Image image = grid.getCellImage(cell);
+        if (image != null) {
+            Rectangle imageBounds = image.getBounds();
+            int y = bounds.y + (bounds.height - imageBounds.height) / 2;
+
+            gc.drawImage(image, bounds.x + x, y);
+
+            x += imageBounds.width + INSIDE_MARGIN;
+        }
+*/
         Image image;
         Rectangle imageBounds = null;
 
@@ -90,10 +101,9 @@ class GridCellRenderer extends AbstractRenderer
                 image = null;
             }
         }
-
-        int columnAlign = grid.getContentProvider().getColumnAlign(col);
-
-        if (image != null && columnAlign != IGridContentProvider.ALIGN_RIGHT) {
+        if (image != null) {
+//            gc.drawImage(image, bounds.x + bounds.width - imageBounds.width - RIGHT_MARGIN, bounds.y + (bounds.height - imageBounds.height) / 2);
+//            x += imageBounds.width + INSIDE_MARGIN;
             int y = bounds.y + (bounds.height - imageBounds.height) / 2;
             gc.drawImage(image, bounds.x + x, y);
 
@@ -101,6 +111,12 @@ class GridCellRenderer extends AbstractRenderer
         }
 
         int width = bounds.width - x - RIGHT_MARGIN;
+
+//        if (drawAsSelected) {
+//            gc.setForeground(colorSelectedText);
+//        } else {
+//            gc.setForeground(grid.getCellForeground(cell));
+//        }
 
         // Get cell text
         if (text != null && !text.isEmpty()) {
@@ -111,27 +127,20 @@ class GridCellRenderer extends AbstractRenderer
 
             gc.setFont(grid.normalFont);
 
+            int columnAlign = grid.getContentProvider().getColumnAlign(col);
+
             switch (columnAlign) {
                 // Center
                 case IGridContentProvider.ALIGN_CENTER:
                     break;
                 case IGridContentProvider.ALIGN_RIGHT:
                     // Right (numbers, datetimes)
-                    int imageMargin = 0;
-                    if (image != null) {
-                        // Reduce bounds by link image size
-                        imageMargin = imageBounds.width + INSIDE_MARGIN;
-                        gc.setClipping(bounds.x, bounds.y, bounds.width - imageMargin, bounds.height);
-                    } else {
-                        gc.setClipping(bounds);
-                    }
                     Point textSize = gc.textExtent(text);
                     gc.drawString(
                             text,
-                            bounds.x + bounds.width - (textSize.x + RIGHT_MARGIN + imageMargin),
+                            bounds.x + bounds.width - (textSize.x + RIGHT_MARGIN),
                             bounds.y + TEXT_TOP_MARGIN + TOP_MARGIN,
                             true);
-                    gc.setClipping((Rectangle) null);
                     break;
                 default:
                     gc.drawString(
@@ -143,27 +152,16 @@ class GridCellRenderer extends AbstractRenderer
             }
         }
 
-        if (image != null && columnAlign == IGridContentProvider.ALIGN_RIGHT) {
-            int y = bounds.y + (bounds.height - imageBounds.height) / 2;
-            gc.drawImage(image, bounds.x + bounds.width - imageBounds.width - RIGHT_MARGIN, y);
-        }
-
         if (grid.isLinesVisible()) {
             if (selected) {
                 gc.setForeground(grid.getLineSelectedColor());
             } else {
                 gc.setForeground(grid.getLineColor());
             }
-            gc.drawLine(
-                bounds.x,
-                bounds.y + bounds.height,
-                bounds.x + bounds.width,
+            gc.drawLine(bounds.x, bounds.y + bounds.height, bounds.x + bounds.width - 1,
                 bounds.y + bounds.height);
-            gc.drawLine(
-                bounds.x + bounds.width - 1,
-                bounds.y,
-                bounds.x + bounds.width - 1,
-                bounds.y + bounds.height);
+            gc.drawLine(bounds.x + bounds.width - 1, bounds.y,
+                bounds.x + bounds.width - 1, bounds.y + bounds.height);
         }
 
         if (focus) {
@@ -183,19 +181,9 @@ class GridCellRenderer extends AbstractRenderer
         if (isLinkState(state)) {
             Point origin = grid.getOrigin(column, row);
             int verMargin = (grid.getItemHeight() - LINK_IMAGE_BOUNDS.height) / 2;
-            int columnAlign = grid.getContentProvider().getColumnAlign(column.getElement());
-
-            if (columnAlign != IGridContentProvider.ALIGN_RIGHT) {
-                if (x >= origin.x + LEFT_MARGIN && x <= origin.x + LEFT_MARGIN + LINK_IMAGE_BOUNDS.width &&
-                    y >= origin.y + verMargin && y <= origin.y + verMargin + LINK_IMAGE_BOUNDS.height) {
-                    return true;
-                }
-            } else {
-                int width = column.getWidth();
-                if (x >= origin.x + width - (LEFT_MARGIN + LINK_IMAGE_BOUNDS.width) && x <= origin.x + width - RIGHT_MARGIN &&
-                    y >= origin.y + verMargin && y <= origin.y + verMargin + LINK_IMAGE_BOUNDS.height) {
-                    return true;
-                }
+            if (x >= origin.x + LEFT_MARGIN && x <= origin.x + LEFT_MARGIN + LINK_IMAGE_BOUNDS.width &&
+                y >= origin.y + verMargin && y <= origin.y + verMargin + LINK_IMAGE_BOUNDS.height) {
+                return true;
             }
 
         }

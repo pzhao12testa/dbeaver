@@ -18,7 +18,6 @@ package org.jkiss.dbeaver.tools.transfer.stream.impl;
 
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.data.DBDAttributeBinding;
-import org.jkiss.dbeaver.model.data.DBDDisplayFormat;
 import org.jkiss.dbeaver.model.data.DBDValueHandler;
 import org.jkiss.dbeaver.tools.transfer.stream.IStreamDataExporter;
 import org.jkiss.dbeaver.tools.transfer.stream.IStreamDataExporterSite;
@@ -29,7 +28,6 @@ import org.jkiss.dbeaver.tools.transfer.stream.IStreamDataExporterSite;
 public abstract class StreamExporterAbstract implements IStreamDataExporter {
 
     private IStreamDataExporterSite site;
-    private DBDDisplayFormat exportFormat;
 
     public IStreamDataExporterSite getSite()
     {
@@ -48,21 +46,13 @@ public abstract class StreamExporterAbstract implements IStreamDataExporter {
         // do nothing
     }
 
-
-
     protected String getValueDisplayString(
         DBDAttributeBinding column,
         Object value)
     {
         final DBDValueHandler valueHandler = column.getValueHandler();
-        return valueHandler.getValueDisplayString(column, value, getValueExportFormat(column));
+        return valueHandler.getValueDisplayString(column, value, getSite().getExportFormat());
     }
 
-    protected DBDDisplayFormat getValueExportFormat(DBDAttributeBinding column) {
-        if (this.exportFormat == null) {
-            this.exportFormat = getSite().getExportFormat();
-        }
-        return this.exportFormat;
-    }
 
 }

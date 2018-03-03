@@ -38,7 +38,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * GenericProcedure
@@ -239,7 +238,7 @@ public class MySQLProcedure extends AbstractProcedure<MySQLDataSource, MySQLCata
 
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException
     {
         return getDeclaration(monitor);
     }
@@ -255,8 +254,4 @@ public class MySQLProcedure extends AbstractProcedure<MySQLDataSource, MySQLCata
         return getContainer().proceduresCache.refreshObject(monitor, getContainer(), this);
     }
 
-    @Override
-    public String toString() {
-        return procedureType.name() + " " + getName();
-    }
 }

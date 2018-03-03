@@ -31,7 +31,6 @@ import org.jkiss.dbeaver.model.struct.DBSObjectState;
 
 import java.sql.ResultSet;
 import java.util.Date;
-import java.util.Map;
 
 /**
  * Oracle materialized view
@@ -156,7 +155,7 @@ public class OracleMaterializedView extends OracleSchemaObject implements Oracle
 
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options)
+    public String getObjectDefinitionText(DBRProgressMonitor monitor)
     {
         return query;
     }

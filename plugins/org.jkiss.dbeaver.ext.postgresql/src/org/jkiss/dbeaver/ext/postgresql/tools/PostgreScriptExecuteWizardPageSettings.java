@@ -1,6 +1,7 @@
 /*
  * DBeaver - Universal Database Manager
  * Copyright (C) 2010-2017 Serge Rider (serge@jkiss.org)
+ * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +27,6 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Text;
-import org.jkiss.dbeaver.ext.postgresql.PostgreMessages;
 import org.jkiss.dbeaver.model.DBIcon;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.UIUtils;
@@ -44,14 +44,14 @@ public class PostgreScriptExecuteWizardPageSettings extends PostgreWizardPageSet
     public PostgreScriptExecuteWizardPageSettings(PostgreScriptExecuteWizard wizard)
     {
         super(wizard, wizard.isImport() ?
-        		PostgreMessages.tool_script_title_import :
-        		PostgreMessages.tool_script_title_execute);
+                "Import configuration" :
+                "Script execute configuration");
         setTitle(wizard.isImport() ?
-        	PostgreMessages.tool_script_title_import :
-        	PostgreMessages.tool_script_title_execute);
+            "Import configuration" :
+            "Script execute configuration");
         setDescription(wizard.isImport() ?
-        	PostgreMessages.tool_script_description_import :
-        	PostgreMessages.tool_script_description_execute);
+            "Database import settings" :
+            "Script execute settings");
     }
 
     @Override
@@ -66,9 +66,9 @@ public class PostgreScriptExecuteWizardPageSettings extends PostgreWizardPageSet
         Composite composite = UIUtils.createPlaceholder(parent, 1);
 
         Group inputGroup = UIUtils.createControlGroup(
-                composite, PostgreMessages.tool_script_label_input, 3, GridData.FILL_HORIZONTAL, 0);
+                composite, "Input", 3, GridData.FILL_HORIZONTAL, 0);
         inputFileText = UIUtils.createLabelText(
-                inputGroup, PostgreMessages.tool_script_label_input_file, "", SWT.BORDER | SWT.READ_ONLY); //$NON-NLS-2$
+                inputGroup, "Input file", "", SWT.BORDER | SWT.READ_ONLY); //$NON-NLS-2$
         inputFileText.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseUp(MouseEvent e)

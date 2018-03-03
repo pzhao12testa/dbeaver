@@ -91,7 +91,8 @@ public class ContentValueManager extends BaseValueManager {
             // Use string editor for cached content
             return new TextViewDialog(controller);
         } else if (value instanceof DBDContent) {
-            return ContentEditor.openEditor(controller);
+            DBDContent content = (DBDContent)value;
+            return ContentEditor.openEditor(controller, content);
         } else {
             controller.showMessage(CoreMessages.model_jdbc_unsupported_content_value_type_, DBPMessageType.ERROR);
             return null;

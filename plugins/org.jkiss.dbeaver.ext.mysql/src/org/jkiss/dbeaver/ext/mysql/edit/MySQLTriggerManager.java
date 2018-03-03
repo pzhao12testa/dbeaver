@@ -19,11 +19,9 @@
 package org.jkiss.dbeaver.ext.mysql.edit;
 
 import org.jkiss.code.Nullable;
-import org.jkiss.dbeaver.ext.mysql.model.MySQLCatalog;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLTable;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLTrigger;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
-import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.impl.DBSObjectCache;
@@ -60,10 +58,7 @@ public class MySQLTriggerManager extends SQLTriggerManager<MySQLTrigger, MySQLTa
                     return null;
                 }
                 MySQLTrigger newTrigger = new MySQLTrigger(parent.getContainer(), parent, editPage.getEntityName());
-                newTrigger.setObjectDefinitionText(
-                    "CREATE TRIGGER " + DBUtils.getQuotedIdentifier(newTrigger) + "\n" +
-                    newTrigger.getActionTiming() + " " + newTrigger.getManipulationType() + "\n" +
-                    "ON " + DBUtils.getQuotedIdentifier(parent) + " FOR EACH ROW\n");
+                newTrigger.setObjectDefinitionText(""); //$NON-NLS-1$
                 return newTrigger;
             }
         }.execute();
@@ -76,17 +71,13 @@ public class MySQLTriggerManager extends SQLTriggerManager<MySQLTrigger, MySQLTa
                     "DROP TRIGGER IF EXISTS " + trigger.getFullyQualifiedName(DBPEvaluationContext.DDL))
             );
         }
-        MySQLCatalog curCatalog = trigger.getCatalog().getDataSource().getDefaultObject();
-        String ddl;
-        if (curCatalog != trigger.getCatalog()) {
-            actions.add(new SQLDatabasePersistAction("Set current schema ", "USE " + DBUtils.getQuotedIdentifier(trigger.getCatalog()), false)); //$NON-NLS-2$
-        }
+        String ddl =
+            "CREATE TRIGGER " + trigger.getFullyQualifiedName(DBPEvaluationContext.DDL) + "\n" +
+                trigger.getActionTiming() + " " + trigger.getManipulationType() + "\n" +
+            "ON " + trigger.getTable().getFullyQualifiedName(DBPEvaluationContext.DDL) + " FOR EACH ROW\n" +
+            trigger.getBody();
 
-        actions.add(new SQLDatabasePersistAction("Create trigger", trigger.getBody(), true)); //$NON-NLS-2$
-
-        if (curCatalog != trigger.getCatalog()) {
-            actions.add(new SQLDatabasePersistAction("Set current schema ", "USE " + DBUtils.getQuotedIdentifier(curCatalog), false)); //$NON-NLS-2$
-        }
+        actions.add(new SQLDatabasePersistAction("Create trigger", ddl, true)); //$NON-NLS-2$
     }
 
 }

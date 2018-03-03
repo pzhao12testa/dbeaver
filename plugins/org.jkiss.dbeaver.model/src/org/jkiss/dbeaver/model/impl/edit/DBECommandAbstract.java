@@ -72,7 +72,7 @@ public class DBECommandAbstract<OBJECT_TYPE extends DBPObject> implements DBECom
     }
 
     @Override
-    public DBEPersistAction[] getPersistActions(Map<String, Object> options)
+    public DBEPersistAction[] getPersistActions()
     {
         return null;
     }

@@ -30,8 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Invalidate datasource job.
- * Invalidates all datasource contexts (not just the one passed in constructor).
+ * InvalidateJob
  */
 public class InvalidateJob extends DataSourceJob
 {
@@ -41,7 +40,7 @@ public class InvalidateJob extends DataSourceJob
         public final DBCExecutionContext.InvalidateResult result;
         public final Exception error;
 
-        ContextInvalidateResult(DBCExecutionContext.InvalidateResult result, Exception error) {
+        public ContextInvalidateResult(DBCExecutionContext.InvalidateResult result, Exception error) {
             this.result = result;
             this.error = error;
         }
@@ -54,11 +53,14 @@ public class InvalidateJob extends DataSourceJob
 
     private long timeSpent;
     private List<ContextInvalidateResult> invalidateResults = new ArrayList<>();
+    //private boolean reconnect;
 
     public InvalidateJob(
-        DBPDataSource dataSource)
+        DBCExecutionContext context/*,
+        boolean reconnect*/)
     {
-        super("Invalidate " + dataSource.getContainer().getName(), dataSource.getDefaultContext(false));
+        super("Invalidate " + context.getDataSource().getContainer().getName(), context);
+//        this.reconnect = reconnect;
     }
 
     public List<ContextInvalidateResult> getInvalidateResults() {

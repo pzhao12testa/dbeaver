@@ -28,8 +28,8 @@ import org.jkiss.dbeaver.registry.DataSourceProviderRegistry;
 import org.jkiss.dbeaver.registry.driver.DriverDescriptor;
 import org.jkiss.dbeaver.ui.dialogs.driver.DriverTreeControl;
 
-public class ConfigImportWizardPageCustomDriver extends WizardPage
-        implements ISelectionChangedListener, IDoubleClickListener {
+
+public class ConfigImportWizardPageCustomDriver extends WizardPage implements ISelectionChangedListener,IDoubleClickListener {
 
     private DriverDescriptor selectedDriver;
 
@@ -41,13 +41,11 @@ public class ConfigImportWizardPageCustomDriver extends WizardPage
     }
 
     @Override
-    public void createControl(Composite parent)
-    {
+    public void createControl(Composite parent) {
         Composite placeholder = new Composite(parent, SWT.NONE);
         placeholder.setLayout(new GridLayout(1, true));
 
-        DriverTreeControl driverTreeControl = new DriverTreeControl(placeholder, this,
-                DataSourceProviderRegistry.getInstance().getEnabledDataSourceProviders(), true);
+        DriverTreeControl driverTreeControl = new DriverTreeControl(placeholder, this, DataSourceProviderRegistry.getInstance().getDataSourceProviders(), true);
         GridData gd = new GridData(GridData.FILL_BOTH);
         gd.heightHint = 200;
         driverTreeControl.setLayoutData(gd);
@@ -56,14 +54,12 @@ public class ConfigImportWizardPageCustomDriver extends WizardPage
     }
 
     @Override
-    public boolean isPageComplete()
-    {
+    public boolean isPageComplete() {
         return selectedDriver != null;
     }
 
     @Override
-    public void selectionChanged(SelectionChangedEvent event)
-    {
+    public void selectionChanged(SelectionChangedEvent event) {
         this.selectedDriver = null;
         this.setMessage("");
         ISelection selection = event.getSelection();
@@ -79,15 +75,13 @@ public class ConfigImportWizardPageCustomDriver extends WizardPage
     }
 
     @Override
-    public void doubleClick(DoubleClickEvent event)
-    {
+    public void doubleClick(DoubleClickEvent event) {
         if (selectedDriver != null) {
             getWizard().getContainer().showPage(getWizard().getNextPage(this));
         }
     }
 
-    public DBPDriver getSelectedDriver()
-    {
+    public DBPDriver getSelectedDriver() {
         return selectedDriver;
     }
 }

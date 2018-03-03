@@ -19,8 +19,12 @@ package org.jkiss.dbeaver.ext.oracle.model;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ext.oracle.model.source.OracleSourceObject;
+import org.jkiss.dbeaver.model.DBPScriptObjectExt;
 import org.jkiss.dbeaver.ext.oracle.model.source.OracleStatefulObject;
-import org.jkiss.dbeaver.model.*;
+import org.jkiss.dbeaver.model.DBConstants;
+import org.jkiss.dbeaver.model.DBPEvaluationContext;
+import org.jkiss.dbeaver.model.DBPEvent;
+import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.jdbc.JDBCPreparedStatement;
@@ -31,12 +35,12 @@ import org.jkiss.dbeaver.model.impl.DBSObjectCache;
 import org.jkiss.dbeaver.model.impl.edit.SQLDatabasePersistAction;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.struct.DBSEntity;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.model.struct.DBSObjectLazy;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,83 +54,68 @@ public class OracleUtils {
     public static String getDDL(
         DBRProgressMonitor monitor,
         String objectType,
-        OracleTableBase object,
-        OracleDDLFormat ddlFormat,
-        Map<String, Object> options) throws DBException
+        DBSEntity object,
+        OracleDDLFormat ddlFormat) throws DBException
     {
         String objectFullName = DBUtils.getObjectFullName(object, DBPEvaluationContext.DDL);
-
-        OracleSchema schema = object.getContainer();
-/*
+        OracleSchema schema = null;
         if (object instanceof OracleSchemaObject) {
             schema = ((OracleSchemaObject)object).getSchema();
         } else if (object instanceof OracleTableBase) {
             schema = ((OracleTableBase)object).getContainer();
         }
-*/
-        final OracleDataSource dataSource = object.getDataSource();
+        final OracleDataSource dataSource = (OracleDataSource) object.getDataSource();
 
         monitor.beginTask("Load sources for " + objectType + " '" + objectFullName + "'...", 1);
         try (final JDBCSession session = DBUtils.openMetaSession(monitor, dataSource, "Load source code for " + objectType + " '" + objectFullName + "'")) {
             if (dataSource.isAtLeastV9()) {
-                try {
-                    JDBCUtils.executeProcedure(
-                        session,
-                        "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'SQLTERMINATOR',true); end;");
-                    JDBCUtils.executeProcedure(
-                        session,
-                        "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'STORAGE'," + ddlFormat.isShowStorage() + "); end;");
-                    JDBCUtils.executeProcedure(
-                        session,
-                        "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'TABLESPACE'," + ddlFormat.isShowTablespace() + ");  end;");
-                    JDBCUtils.executeProcedure(
-                        session,
-                        "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'SEGMENT_ATTRIBUTES'," + ddlFormat.isShowSegments() + ");  end;");
-                } catch (SQLException e) {
-                    log.error("Can't apply DDL transform parameters", e);
-                }
+                JDBCUtils.executeProcedure(
+                    session,
+                    "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'SQLTERMINATOR',true); end;");
+                JDBCUtils.executeProcedure(
+                    session,
+                    "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'STORAGE'," + ddlFormat.isShowStorage() + "); end;");
+                JDBCUtils.executeProcedure(
+                    session,
+                    "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'TABLESPACE'," + ddlFormat.isShowTablespace() + ");  end;");
+                JDBCUtils.executeProcedure(
+                    session,
+                    "begin DBMS_METADATA.SET_TRANSFORM_PARAM(DBMS_METADATA.SESSION_TRANSFORM,'SEGMENT_ATTRIBUTES'," + ddlFormat.isShowSegments() + ");  end;");
             }
 
-            String ddl;
+            String ddlQuery = "SELECT " +
+                    "DBMS_METADATA.GET_DDL(?,?" + (schema == null ? "" : ",?") + ")";
+            if (ddlFormat != OracleDDLFormat.COMPACT) {
+                ddlQuery += " || ' ' || DBMS_METADATA.GET_DEPENDENT_DDL('COMMENT',?" + (schema == null ? "" : ",?") + ")";
+            }
+            ddlQuery += " TXT FROM DUAL";
             try (JDBCPreparedStatement dbStat = session.prepareStatement(
-                "SELECT DBMS_METADATA.GET_DDL(?,?" + (schema == null ? "" : ",?") + ") TXT FROM DUAL")) {
-                dbStat.setString(1, objectType);
-                dbStat.setString(2, object.getName());
+                    ddlQuery)) {
+                int paramIndex = 1;
+                dbStat.setString(paramIndex++, objectType);
+                dbStat.setString(paramIndex++, object.getName());
                 if (schema != null) {
-                    dbStat.setString(3, schema.getName());
+                    dbStat.setString(paramIndex++, schema.getName());
+                }
+                if (ddlFormat != OracleDDLFormat.COMPACT) {
+                    dbStat.setString(paramIndex++, object.getName());
+                    if (schema != null) {
+                        dbStat.setString(paramIndex++, schema.getName());
+                    }
                 }
                 try (JDBCResultSet dbResult = dbStat.executeQuery()) {
                     if (dbResult.next()) {
-                        ddl = dbResult.getString(1);
+                        return dbResult.getString(1);
                     } else {
                         log.warn("No DDL for " + objectType + " '" + objectFullName + "'");
                         return "-- EMPTY DDL";
                     }
                 }
             }
-            if (ddlFormat != OracleDDLFormat.COMPACT) {
-                try (JDBCPreparedStatement dbStat = session.prepareStatement(
-                    "SELECT DBMS_METADATA.GET_DEPENDENT_DDL('COMMENT',?" + (schema == null ? "" : ",?") + ") TXT FROM DUAL")) {
-                    dbStat.setString(1, object.getName());
-                    if (schema != null) {
-                        dbStat.setString(2, schema.getName());
-                    }
-                    try (JDBCResultSet dbResult = dbStat.executeQuery()) {
-                        if (dbResult.next()) {
-                            ddl += "\n" + dbResult.getString(1);
-                        }
-                    }
-                } catch (Exception e) {
-                    // No dependent DDL or something went wrong
-                    log.debug("Error reading dependent DDL", e);
-                }
-            }
-            return ddl;
-
         } catch (SQLException e) {
-            if (object instanceof OracleTablePhysical) {
+            if (object instanceof OracleTableBase) {
                 log.error("Error generating Oracle DDL. Generate default.", e);
-                return JDBCUtils.generateTableDDL(monitor, (OracleTableBase)object, options, true);
+                return JDBCUtils.generateTableDDL(monitor, (OracleTableBase)object, true);
             } else {
                 throw new DBException(e, dataSource);
             }
@@ -151,7 +140,7 @@ public class OracleUtils {
         try {
             String source = body ?
                 ((DBPScriptObjectExt)object).getExtendedDefinitionText(null) :
-                object.getObjectDefinitionText(null, DBPScriptObject.EMPTY_OPTIONS);
+                object.getObjectDefinitionText(null);
             if (source == null) {
                 return null;
             }

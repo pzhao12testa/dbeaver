@@ -39,15 +39,6 @@ public class DBNDatabaseObject extends DBNDatabaseNode implements DBSObject
         this.meta = meta;
         registerNode();
     }
-    
-    @Override
-    public <T> T getAdapter(Class<T> adapter) {
-        if (adapter == DBSObject.class) {
-            DBSObject databaseObject = getObject();
-            return adapter.cast(databaseObject);
-        }
-        return super.getAdapter(adapter);
-    }
 
     @Override
     protected void dispose(boolean reflect)

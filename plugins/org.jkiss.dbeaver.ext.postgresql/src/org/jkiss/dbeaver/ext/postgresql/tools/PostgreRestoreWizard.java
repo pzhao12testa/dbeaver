@@ -1,6 +1,7 @@
 /*
  * DBeaver - Universal Database Manager
  * Copyright (C) 2010-2017 Serge Rider (serge@jkiss.org)
+ * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +22,9 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.IWorkbench;
-import org.jkiss.dbeaver.ext.postgresql.PostgreMessages;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreDatabase;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.dbeaver.ui.UIUtils;
 
 import java.io.File;
@@ -37,11 +38,10 @@ class PostgreRestoreWizard extends PostgreBackupRestoreWizard<PostgreDatabaseRes
     private PostgreRestoreWizardPageSettings settingsPage;
     private PostgreDatabaseRestoreInfo restoreInfo;
 
-    String inputFile;
-    boolean cleanFirst;
+    public String inputFile;
 
-    PostgreRestoreWizard(PostgreDatabase database) {
-        super(Collections.singletonList(database), PostgreMessages.wizard_restore_title);
+    public PostgreRestoreWizard(PostgreDatabase database) {
+        super(Collections.<DBSObject>singletonList(database), "Database restore");
         restoreInfo = new PostgreDatabaseRestoreInfo(database);
     }
 
@@ -79,29 +79,24 @@ class PostgreRestoreWizard extends PostgreBackupRestoreWizard<PostgreDatabaseRes
     }
 
     @Override
-    public void onSuccess(long workTime) {
+	public void onSuccess(long workTime) {
         UIUtils.showMessageBox(
             getShell(),
             "Database restore",
             "Restore '" + getObjectsName() + "'",
             SWT.ICON_INFORMATION);
-    }
+	}
 
     @Override
-    public void fillProcessParameters(List<String> cmd, PostgreDatabaseRestoreInfo arg) throws IOException {
+    public void fillProcessParameters(List<String> cmd, PostgreDatabaseRestoreInfo arg) throws IOException
+    {
         super.fillProcessParameters(cmd, arg);
-
-        if (cleanFirst) {
-            cmd.add("-c");
-        }
     }
 
     @Override
     protected List<String> getCommandLine(PostgreDatabaseRestoreInfo arg) throws IOException {
         List<String> cmd = super.getCommandLine(arg);
-        if (format != ExportFormat.PLAIN) {
-            cmd.add("--format=" + format.getId());
-        }
+        cmd.add("--format=" + format.getId());
         cmd.add("--dbname=" + arg.getDatabase().getName());
 
         return cmd;
@@ -113,7 +108,8 @@ class PostgreRestoreWizard extends PostgreBackupRestoreWizard<PostgreDatabaseRes
     }
 
     @Override
-    protected void startProcessHandler(DBRProgressMonitor monitor, final PostgreDatabaseRestoreInfo arg, ProcessBuilder processBuilder, Process process) {
+    protected void startProcessHandler(DBRProgressMonitor monitor, final PostgreDatabaseRestoreInfo arg, ProcessBuilder processBuilder, Process process)
+    {
         super.startProcessHandler(monitor, arg, processBuilder, process);
         new BinaryFileTransformerJob(monitor, new File(inputFile), process.getOutputStream()).start();
     }

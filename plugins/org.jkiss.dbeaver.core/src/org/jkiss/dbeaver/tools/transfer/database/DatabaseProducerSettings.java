@@ -27,7 +27,7 @@ import org.jkiss.utils.CommonUtils;
  */
 public class DatabaseProducerSettings implements IDataTransferSettings {
 
-    public enum ExtractType {
+    enum ExtractType {
         SINGLE_QUERY,
         SEGMENTS
     }
@@ -38,8 +38,6 @@ public class DatabaseProducerSettings implements IDataTransferSettings {
 
     private boolean openNewConnections = true;
     private boolean queryRowCount = true;
-    private boolean selectedRowsOnly = false;
-    private boolean selectedColumnsOnly = false;
     private ExtractType extractType = ExtractType.SINGLE_QUERY;
 
     public DatabaseProducerSettings()
@@ -66,22 +64,6 @@ public class DatabaseProducerSettings implements IDataTransferSettings {
     public void setQueryRowCount(boolean queryRowCount)
     {
         this.queryRowCount = queryRowCount;
-    }
-
-    public boolean isSelectedRowsOnly() {
-        return selectedRowsOnly;
-    }
-
-    public void setSelectedRowsOnly(boolean selectedRowsOnly) {
-        this.selectedRowsOnly = selectedRowsOnly;
-    }
-
-    public boolean isSelectedColumnsOnly() {
-        return selectedColumnsOnly;
-    }
-
-    public void setSelectedColumnsOnly(boolean selectedColumnsOnly) {
-        this.selectedColumnsOnly = selectedColumnsOnly;
     }
 
     public boolean isOpenNewConnections()

@@ -40,7 +40,7 @@ public class BaseAuthDialog extends BaseDialog
 
     public BaseAuthDialog(Shell parentShell, String title, boolean passwordOnly)
     {
-        super(parentShell, title, DBIcon.TREE_USER);
+        super(parentShell, title, DBIcon.CONNECTIONS);
         this.passwordOnly = passwordOnly;
     }
 

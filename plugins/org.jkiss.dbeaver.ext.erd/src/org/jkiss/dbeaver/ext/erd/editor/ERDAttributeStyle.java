@@ -29,8 +29,7 @@ public enum ERDAttributeStyle
 {
     ICONS(1, "Icons"),
     TYPES(2, "Data Types"),
-    NULLABILITY(4, "Nullability"),
-    COMMENTS(8, "Comments")
+    NULLABILITY(4, "Nullability")
     ;
 
     private final int value;

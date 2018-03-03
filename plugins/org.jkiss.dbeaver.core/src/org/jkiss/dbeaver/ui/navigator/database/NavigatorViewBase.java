@@ -122,46 +122,42 @@ public abstract class NavigatorViewBase extends ViewPart implements INavigatorMo
             {
                 TreeViewer viewer = tree.getViewer();
                 IStructuredSelection selection = (IStructuredSelection) viewer.getSelection();
-                for (Object node : selection.toArray()) {
-                    //Object node = selection.getFirstElement();
-                    if ((node instanceof DBNResource && ((DBNResource) node).getResource() instanceof IFolder)) {
-                        toggleNode(viewer, node);
-                    } else if (node instanceof DBNDataSource) {
-                        DoubleClickBehavior dsBehaviorDefault = DoubleClickBehavior.valueOf(DBeaverCore.getGlobalPreferenceStore().getString(DBeaverPreferences.NAVIGATOR_CONNECTION_DOUBLE_CLICK));
-                        if (dsBehaviorDefault == DoubleClickBehavior.EXPAND) {
-                            toggleNode(viewer, node);
+                if (selection.size() == 1) {
+                    Object node = selection.getFirstElement();
+                    if ((node instanceof DBNResource && ((DBNResource) node).getResource() instanceof IFolder) ||
+                        (node instanceof DBNDataSource &&
+                            DoubleClickBehavior.valueOf(DBeaverCore.getGlobalPreferenceStore().getString(DBeaverPreferences.NAVIGATOR_CONNECTION_DOUBLE_CLICK)) == DoubleClickBehavior.EXPAND))
+                    {
+                        if (Boolean.TRUE.equals(viewer.getExpandedState(node))) {
+                            viewer.collapseToLevel(node, 1);
                         } else {
-                            DBPDataSourceContainer dataSource = ((DBNDataSource) node).getObject();
-                            NavigatorViewBase.DoubleClickBehavior doubleClickBehavior =
-                                NavigatorViewBase.DoubleClickBehavior.valueOf(DBeaverCore.getGlobalPreferenceStore().getString(DBeaverPreferences.NAVIGATOR_CONNECTION_DOUBLE_CLICK));
-                            switch (doubleClickBehavior) {
-                                case EDIT:
-                                    NavigatorHandlerObjectOpen.openEntityEditor((DBNDataSource) node, null, DBeaverUI.getActiveWorkbenchWindow());
-                                    break;
-                                case CONNECT:
-                                    if (dataSource.isConnected()) {
-                                        DataSourceHandler.disconnectDataSource(dataSource, null);
-                                    } else {
-                                        DataSourceHandler.connectToDataSource(null, dataSource, null);
-                                    }
-                                    break;
-                                case SQL_EDITOR:
-                                    try {
-                                        OpenHandler.openRecentScript(getSite().getWorkbenchWindow(), dataSource, null);
-                                    } catch (CoreException e) {
-                                        DBUserInterface.getInstance().showError("Open SQL editor", "Can't open SQL editor", e);
-                                    }
-                                    break;
-                            }
+                            viewer.expandToLevel(node, 1);
+                        }
+                    } else if (node instanceof DBNDataSource) {
+                        DBPDataSourceContainer dataSource = ((DBNDataSource) node).getObject();
+                        NavigatorViewBase.DoubleClickBehavior doubleClickBehavior =
+                            NavigatorViewBase.DoubleClickBehavior.valueOf(DBeaverCore.getGlobalPreferenceStore().getString(DBeaverPreferences.NAVIGATOR_CONNECTION_DOUBLE_CLICK));
+                        switch (doubleClickBehavior) {
+                            case EDIT:
+                                NavigatorHandlerObjectOpen.openEntityEditor((DBNDataSource) node, null, DBeaverUI.getActiveWorkbenchWindow());
+                                break;
+                            case CONNECT:
+                                if (dataSource.isConnected()) {
+                                    DataSourceHandler.disconnectDataSource(dataSource, null);
+                                } else {
+                                    DataSourceHandler.connectToDataSource(null, dataSource, null);
+                                }
+                                break;
+                            case SQL_EDITOR:
+                                try {
+                                    OpenHandler.openRecentScript(getSite().getWorkbenchWindow(), dataSource, null);
+                                } catch (CoreException e) {
+                                    DBUserInterface.getInstance().showError("Open SQL editor", "Can't open SQL editor", e);
+                                }
+                                break;
                         }
                     } else {
-                        DoubleClickBehavior dcBehaviorDefault = DoubleClickBehavior.valueOf(DBeaverCore.getGlobalPreferenceStore().getString(DBeaverPreferences.NAVIGATOR_OBJECT_DOUBLE_CLICK));
-                        boolean hasChildren = node instanceof DBNNode && ((DBNNode) node).hasChildren(true);
-                        if (hasChildren && dcBehaviorDefault == DoubleClickBehavior.EXPAND) {
-                            toggleNode(viewer, node);
-                        } else {
-                            NavigatorUtils.executeNodeAction(DBXTreeNodeHandler.Action.open, node, getSite());
-                        }
+                        NavigatorUtils.executeNodeAction(DBXTreeNodeHandler.Action.open, node, getSite());
                     }
                 }
             }
@@ -174,14 +170,6 @@ public abstract class NavigatorViewBase extends ViewPart implements INavigatorMo
         NavigatorUtils.addDragAndDropSupport(navigatorTree.getViewer());
 
         return navigatorTree;
-    }
-
-    private void toggleNode(TreeViewer viewer, Object node) {
-        if (Boolean.TRUE.equals(viewer.getExpandedState(node))) {
-            viewer.collapseToLevel(node, 1);
-        } else {
-            viewer.expandToLevel(node, 1);
-        }
     }
 
     protected void onSelectionChange(IStructuredSelection structSel) {

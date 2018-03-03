@@ -25,6 +25,7 @@ import org.jkiss.dbeaver.model.DBPDataKind;
 import org.jkiss.dbeaver.model.DBPEvaluationContext;
 import org.jkiss.dbeaver.model.DBPQualifiedObject;
 import org.jkiss.dbeaver.model.DBUtils;
+import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.DBCLogicalOperator;
 import org.jkiss.dbeaver.model.impl.DBObjectNameCaseTransformer;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
@@ -167,7 +168,7 @@ public class ExasolDataType extends ExasolObject<DBSObject> implements DBSDataTy
     }
 
     @Override
-    public Integer getPrecision() {
+    public int getPrecision() {
         if (typeDesc.precision != null) {
             return typeDesc.precision;
         } else {
@@ -178,7 +179,7 @@ public class ExasolDataType extends ExasolObject<DBSObject> implements DBSDataTy
 
     @Nullable
     @Override
-    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBCException {
         return null;
     }
 
@@ -238,7 +239,7 @@ public class ExasolDataType extends ExasolObject<DBSObject> implements DBSDataTy
 
     @Override
     @Property(viewable = true, editable = false, order = 6)
-    public Integer getScale() {
+    public int getScale() {
         return scale;
     }
 

@@ -21,7 +21,6 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.ext.mysql.MySQLMessages;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLDataSource;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLUser;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.edit.*;
 import org.jkiss.dbeaver.model.edit.prop.DBECommandComposite;
 import org.jkiss.dbeaver.model.exec.DBCSession;
@@ -41,7 +40,7 @@ import java.util.Map;
 public class MySQLUserManager extends AbstractObjectManager<MySQLUser> implements DBEObjectMaker<MySQLUser, MySQLDataSource>, DBECommandFilter<MySQLUser> {
 
     @Override
-    public long getMakerOptions(DBPDataSource dataSource)
+    public long getMakerOptions()
     {
         return FEATURE_EDITOR_ON_CREATE;
     }
@@ -116,12 +115,12 @@ public class MySQLUserManager extends AbstractObjectManager<MySQLUser> implement
             super(user, MySQLMessages.edit_user_manager_command_drop_user);
         }
         @Override
-        public DBEPersistAction[] getPersistActions(Map<String, Object> options)
+        public DBEPersistAction[] getPersistActions()
         {
             return new DBEPersistAction[] {
                 new SQLDatabasePersistAction(MySQLMessages.edit_user_manager_command_drop_user, "DROP USER " + getObject().getFullName()) { //$NON-NLS-2$
                     @Override
-                    public void afterExecute(DBCSession session, Throwable error)
+                    public void handleExecute(DBCSession session, Throwable error)
                     {
                         if (error == null) {
                             getObject().setPersisted(false);

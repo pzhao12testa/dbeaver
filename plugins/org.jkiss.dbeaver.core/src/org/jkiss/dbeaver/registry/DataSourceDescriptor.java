@@ -25,7 +25,6 @@ import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
-import org.jkiss.dbeaver.ModelPreferences;
 import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.app.DBPDataSourceRegistry;
 import org.jkiss.dbeaver.model.app.DBPPlatform;
@@ -54,8 +53,6 @@ import org.jkiss.dbeaver.runtime.TasksJob;
 import org.jkiss.dbeaver.runtime.properties.PropertyCollector;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
 import org.jkiss.dbeaver.ui.actions.datasource.DataSourceHandler;
-import org.jkiss.dbeaver.utils.GeneralUtils;
-import org.jkiss.dbeaver.utils.SystemVariablesResolver;
 import org.jkiss.utils.CommonUtils;
 
 import java.io.IOException;
@@ -76,40 +73,6 @@ public class DataSourceDescriptor
 {
     private static final Log log = Log.getLog(DataSourceDescriptor.class);
 
-    public static final String[] CONNECT_PATTERNS = new String[] {
-        RegistryConstants.VARIABLE_HOST,
-        RegistryConstants.VARIABLE_PORT,
-        RegistryConstants.VARIABLE_SERVER,
-        RegistryConstants.VARIABLE_DATABASE,
-        RegistryConstants.VARIABLE_USER,
-        RegistryConstants.VARIABLE_PASSWORD,
-        RegistryConstants.VARIABLE_URL,
-
-        SystemVariablesResolver.VAR_WORKSPACE,
-        SystemVariablesResolver.VAR_HOME,
-        SystemVariablesResolver.VAR_DBEAVER_HOME,
-        SystemVariablesResolver.VAR_APP_NAME,
-        SystemVariablesResolver.VAR_APP_VERSION,
-        SystemVariablesResolver.VAR_LOCAL_IP
-    };
-
-    public static final String[][] CONNECT_VARIABLES = new String[][]{
-        {RegistryConstants.VARIABLE_HOST, "target host"},
-        {RegistryConstants.VARIABLE_PORT, "target port"},
-        {RegistryConstants.VARIABLE_SERVER, "target server name"},
-        {RegistryConstants.VARIABLE_DATABASE, "target database"},
-        {RegistryConstants.VARIABLE_USER, "user name"},
-        {RegistryConstants.VARIABLE_PASSWORD, "password (plain)"},
-        {RegistryConstants.VARIABLE_URL, "JDBC URL"},
-
-        {SystemVariablesResolver.VAR_WORKSPACE, "workspace path"},
-        {SystemVariablesResolver.VAR_HOME, "user home path"},
-        {SystemVariablesResolver.VAR_DBEAVER_HOME, "application install path"},
-        {SystemVariablesResolver.VAR_APP_NAME, "application name"},
-        {SystemVariablesResolver.VAR_APP_VERSION, "application version"},
-        {SystemVariablesResolver.VAR_LOCAL_IP, "local IP address"},
-    };
-
     @NotNull
     private final DBPDataSourceRegistry registry;
     @NotNull
@@ -119,9 +82,6 @@ public class DataSourceDescriptor
     @NotNull
     private DBPConnectionConfiguration connectionInfo;
     private DBPConnectionConfiguration tunnelConnectionInfo;
-    // Copy of connection info with resolved params (cache)
-    private DBPConnectionConfiguration resolvedConnectionInfo;
-
     @NotNull
     private String id;
     private String name;
@@ -270,10 +230,7 @@ public class DataSourceDescriptor
     @Override
     public DBPConnectionConfiguration getActualConnectionConfiguration()
     {
-        return
-            this.resolvedConnectionInfo != null ?
-                this.resolvedConnectionInfo :
-                (this.tunnelConnectionInfo != null ? tunnelConnectionInfo : connectionInfo);
+        return tunnelConnectionInfo != null ? tunnelConnectionInfo : connectionInfo;
     }
 
     @NotNull
@@ -457,40 +414,26 @@ public class DataSourceDescriptor
         }
         // Test all super classes
         for (Class<?> testType = type; testType != null; testType = testType.getSuperclass()) {
-            FilterMapping filterMapping = getTypeFilterMapping(parentObject, firstMatch, testType);
-            if (filterMapping != null) {
-                return filterMapping;
+            FilterMapping filterMapping = filterMap.get(testType.getName());
+            DBSObjectFilter filter;
+            if (filterMapping == null) {
+                // Try to find using interfaces and superclasses
+                for (Class<?> it : testType.getInterfaces()) {
+                    filterMapping = filterMap.get(it.getName());
+                    if (filterMapping != null) {
+                        filter = filterMapping.getFilter(parentObject, firstMatch);
+                        if (filter != null && (firstMatch || filter.isEnabled())) return filterMapping;
+                    }
+                }
             }
-        }
-        for (Class<?> testType : type.getInterfaces()) {
-            FilterMapping filterMapping = getTypeFilterMapping(parentObject, firstMatch, testType);
             if (filterMapping != null) {
-                return filterMapping;
-            }
-        }
-
-        return null;
-    }
-
-    private FilterMapping getTypeFilterMapping(@Nullable DBSObject parentObject, boolean firstMatch, Class<?> testType) {
-        FilterMapping filterMapping = filterMap.get(testType.getName());
-        DBSObjectFilter filter;
-        if (filterMapping == null) {
-            // Try to find using interfaces and superclasses
-            for (Class<?> it : testType.getInterfaces()) {
-                filterMapping = filterMap.get(it.getName());
-                if (filterMapping != null) {
-                    filter = filterMapping.getFilter(parentObject, firstMatch);
-                    if (filter != null && (firstMatch || filter.isEnabled())) return filterMapping;
+                filter = filterMapping.getFilter(parentObject, firstMatch);
+                if (filter != null && (firstMatch || !filter.isNotApplicable())) {
+                    return filterMapping;
                 }
             }
         }
-        if (filterMapping != null) {
-            filter = filterMapping.getFilter(parentObject, firstMatch);
-            if (filter != null && (firstMatch || !filter.isNotApplicable())) {
-                return filterMapping;
-            }
-        }
+
         return null;
     }
 
@@ -691,7 +634,6 @@ public class DataSourceDescriptor
 
         connecting = true;
         tunnelConnectionInfo = null;
-        resolvedConnectionInfo = null;
         try {
             // Handle tunnel
             // Open tunnel and replace connection info with new one
@@ -711,12 +653,10 @@ public class DataSourceDescriptor
                 try {
                     if (!tunnelConfiguration.isSavePassword()) {
                         DBWTunnel.AuthCredentials rc = tunnel.getRequiredCredentials(tunnelConfiguration);
-                        if (rc != DBWTunnel.AuthCredentials.NONE) {
-                            if (!DataSourceHandler.askForPassword(this, tunnelConfiguration, rc == DBWTunnel.AuthCredentials.PASSWORD)) {
-                                DataSourceHandler.updateDataSourceObject(this);
-                                tunnel = null;
-                                return false;
-                            }
+                        if (!DataSourceHandler.askForPassword(this, tunnelConfiguration, rc == DBWTunnel.AuthCredentials.PASSWORD)) {
+                            DataSourceHandler.updateDataSourceObject(this);
+                            tunnel = null;
+                            return false;
                         }
                     }
 
@@ -731,10 +671,6 @@ public class DataSourceDescriptor
                     }
 */
 
-                    if (preferenceStore.getBoolean(ModelPreferences.CONNECT_USE_ENV_VARS)) {
-                        tunnelConfiguration = new DBWHandlerConfiguration(tunnelConfiguration);
-                        tunnelConfiguration.resolveSystemEnvironmentVariables();
-                    }
                     tunnelConnectionInfo = tunnel.initializeTunnel(monitor, registry.getPlatform(), tunnelConfiguration, connectionInfo);
                 } catch (Exception e) {
                     throw new DBCException("Can't initialize tunnel", e);
@@ -743,13 +679,7 @@ public class DataSourceDescriptor
             }
 
             monitor.subTask("Connect to data source");
-
-            if (preferenceStore.getBoolean(ModelPreferences.CONNECT_USE_ENV_VARS)) {
-                this.resolvedConnectionInfo = new DBPConnectionConfiguration(this.tunnelConnectionInfo != null ? tunnelConnectionInfo : connectionInfo);
-                this.resolvedConnectionInfo.resolveSystemEnvironmentVariables();
-            }
-
-            this.dataSource = getDriver().getDataSourceProvider().openDataSource(monitor, this);
+            dataSource = getDriver().getDataSourceProvider().openDataSource(monitor, this);
             monitor.worked(1);
 
             if (initialize) {
@@ -841,7 +771,20 @@ public class DataSourceDescriptor
         DBPConnectionConfiguration info = getActualConnectionConfiguration();
         DBRShellCommand command = info.getEvent(eventType);
         if (command != null && command.isEnabled()) {
-            final DBRProcessDescriptor processDescriptor = new DBRProcessDescriptor(command, getVariablesResolver());
+            Map<String, Object> variables = new HashMap<>();
+            for (Map.Entry<String, String> entry : info.getProperties().entrySet()) {
+                variables.put(CommonUtils.toString(entry.getKey()), entry.getValue());
+            }
+            variables.put(RegistryConstants.VARIABLE_HOST, info.getHostName());
+            variables.put(RegistryConstants.VARIABLE_PORT, info.getHostPort());
+            variables.put(RegistryConstants.VARIABLE_SERVER, info.getServerName());
+            variables.put(RegistryConstants.VARIABLE_DATABASE, info.getDatabaseName());
+            variables.put(RegistryConstants.VARIABLE_USER, info.getUserName());
+            variables.put(RegistryConstants.VARIABLE_PASSWORD, info.getUserPassword());
+            variables.put(RegistryConstants.VARIABLE_URL, info.getUrl());
+
+            final DBRProcessDescriptor processDescriptor = new DBRProcessDescriptor(command, variables);
+            //processDescriptor.getProcessBuilder().redirectErrorStream(true);
 
             monitor.subTask("Execute process " + processDescriptor.getName());
             DBUserInterface.getInstance().executeProcess(processDescriptor);
@@ -939,10 +882,8 @@ public class DataSourceDescriptor
                 }
             }
 
-            this.dataSource = null;
-            this.tunnelConnectionInfo = null;
-            this.resolvedConnectionInfo = null;
-            this.connectTime = null;
+            dataSource = null;
+            connectTime = null;
 
             if (reflect) {
                 // Reflect UI
@@ -1299,25 +1240,4 @@ public class DataSourceDescriptor
         }
     }
 
-    @Override
-    public GeneralUtils.IVariableResolver getVariablesResolver() {
-        return name -> {
-            String propValue = getActualConnectionConfiguration().getProperties().get(name);
-            if (propValue != null) {
-                return propValue;
-            }
-
-            name = name.toLowerCase(Locale.ENGLISH);
-            switch (name) {
-                case RegistryConstants.VARIABLE_HOST: return getActualConnectionConfiguration().getHostName();
-                case RegistryConstants.VARIABLE_PORT: return getActualConnectionConfiguration().getHostPort();
-                case RegistryConstants.VARIABLE_SERVER: return getActualConnectionConfiguration().getServerName();
-                case RegistryConstants.VARIABLE_DATABASE: return getActualConnectionConfiguration().getDatabaseName();
-                case RegistryConstants.VARIABLE_USER: return getActualConnectionConfiguration().getUserName();
-                case RegistryConstants.VARIABLE_PASSWORD: return getActualConnectionConfiguration().getUserPassword();
-                case RegistryConstants.VARIABLE_URL: return getActualConnectionConfiguration().getUrl();
-                default: return SystemVariablesResolver.INSTANCE.get(name);
-            }
-        };
-    }
 }

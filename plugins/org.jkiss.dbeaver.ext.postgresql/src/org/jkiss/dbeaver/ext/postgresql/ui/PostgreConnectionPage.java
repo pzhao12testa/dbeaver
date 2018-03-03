@@ -21,14 +21,11 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 import org.jkiss.dbeaver.ext.postgresql.PostgreActivator;
 import org.jkiss.dbeaver.ext.postgresql.PostgreConstants;
-import org.jkiss.dbeaver.ext.postgresql.PostgreMessages;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.ui.ICompositeDialogPage;
@@ -51,8 +48,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
     private Text usernameText;
     private Text passwordText;
     private ClientHomesSelector homesSelector;
-    private Button showNonDefault;
-    private Button switchDatabaseOnExpand;
+    private Button hideNonDefault;
     private boolean activated = false;
 
     private static ImageDescriptor LOGO_IMG = PostgreActivator.getImageDescriptor("icons/postgresql_logo.png");
@@ -75,6 +71,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
             public void modifyText(ModifyEvent e)
             {
                 if (activated) {
+                    saveSettings(site.getActiveDataSource());
                     site.updateButtons();
                 }
             }
@@ -86,7 +83,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         GridData gd = new GridData(GridData.FILL_BOTH);
         addrGroup.setLayoutData(gd);
 
-        Label hostLabel = UIUtils.createControlLabel(addrGroup, PostgreMessages.dialog_setting_connection_host);
+        Label hostLabel = UIUtils.createControlLabel(addrGroup, "Host");
         hostLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
 
         hostText = new Text(addrGroup, SWT.BORDER);
@@ -95,7 +92,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         hostText.setLayoutData(gd);
         hostText.addModifyListener(textListener);
 
-        Label portLabel = UIUtils.createControlLabel(addrGroup, PostgreMessages.dialog_setting_connection_port);
+        Label portLabel = UIUtils.createControlLabel(addrGroup, "Port");
         gd = new GridData(GridData.HORIZONTAL_ALIGN_END);
         portLabel.setLayoutData(gd);
 
@@ -106,7 +103,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         portText.addVerifyListener(UIUtils.getIntegerVerifyListener(Locale.getDefault()));
         portText.addModifyListener(textListener);
 
-        Label dbLabel = UIUtils.createControlLabel(addrGroup, PostgreMessages.dialog_setting_connection_database);
+        Label dbLabel = UIUtils.createControlLabel(addrGroup, "Database");
         dbLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
 
         dbText = new Text(addrGroup, SWT.BORDER);
@@ -116,7 +113,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         dbText.setLayoutData(gd);
         dbText.addModifyListener(textListener);
 
-        Label usernameLabel = UIUtils.createControlLabel(addrGroup, PostgreMessages.dialog_setting_connection_user);
+        Label usernameLabel = UIUtils.createControlLabel(addrGroup, "User");
         usernameLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
 
         usernameText = new Text(addrGroup, SWT.BORDER);
@@ -125,7 +122,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         usernameText.setLayoutData(gd);
         usernameText.addModifyListener(textListener);
 
-        Label passwordLabel = UIUtils.createControlLabel(addrGroup, PostgreMessages.dialog_setting_connection_password);
+        Label passwordLabel = UIUtils.createControlLabel(addrGroup, "Password");
         passwordLabel.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_END));
 
         passwordText = new Text(addrGroup, SWT.BORDER | SWT.PASSWORD);
@@ -140,27 +137,20 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
             gd.horizontalSpan = 2;
             buttonsGroup.setLayoutData(gd);
             buttonsGroup.setLayout(new GridLayout(2, false));
-            homesSelector = new ClientHomesSelector(buttonsGroup, SWT.NONE, PostgreMessages.dialog_setting_connection_localClient);
+            homesSelector = new ClientHomesSelector(buttonsGroup, SWT.NONE, "Local Client");
             gd = new GridData(GridData.FILL_HORIZONTAL | GridData.HORIZONTAL_ALIGN_BEGINNING);
             homesSelector.getPanel().setLayoutData(gd);
         }
 
         {
             Group secureGroup = new Group(addrGroup, SWT.NONE);
-            secureGroup.setText(PostgreMessages.dialog_setting_connection_settings);
+            secureGroup.setText("Settings");
             gd = new GridData(GridData.FILL_HORIZONTAL);
             gd.horizontalSpan = 4;
             secureGroup.setLayoutData(gd);
             secureGroup.setLayout(new GridLayout(2, false));
 
-            showNonDefault = UIUtils.createCheckbox(secureGroup, PostgreMessages.dialog_setting_connection_nondefaultDatabase, PostgreMessages.dialog_setting_connection_nondefaultDatabase_tip, true, 2);
-            showNonDefault.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(SelectionEvent e) {
-                    switchDatabaseOnExpand.setEnabled(showNonDefault.getSelection());
-                }
-            });
-            switchDatabaseOnExpand = UIUtils.createCheckbox(secureGroup, PostgreMessages.dialog_setting_connection_switchDatabaseOnExpand, PostgreMessages.dialog_setting_connection_switchDatabaseOnExpand_tip, true, 2);
+            hideNonDefault = UIUtils.createLabelCheckbox(secureGroup, "Show non-default databases", true);
         }
 
         createDriverPanel(addrGroup);
@@ -204,8 +194,8 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         }
         if (dbText != null) {
             String databaseName = connectionInfo.getDatabaseName();
-            if (CommonUtils.isEmpty(databaseName)) {
-                databaseName = getSite().isNew() ? PostgreConstants.DEFAULT_DATABASE : "";
+            if (CommonUtils.isEmpty(databaseName) && getSite().isNew()) {
+                databaseName = PostgreConstants.DEFAULT_DATABASE;
             }
             dbText.setText(databaseName);
         }
@@ -217,10 +207,8 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
         }
         homesSelector.populateHomes(site.getDriver(), connectionInfo.getClientHomeId());
 
-        showNonDefault.setSelection(CommonUtils.toBoolean(connectionInfo.getProviderProperty(PostgreConstants.PROP_SHOW_NON_DEFAULT_DB)));
-
-        switchDatabaseOnExpand.setSelection(CommonUtils.toBoolean(connectionInfo.getProviderProperty(PostgreConstants.PROP_SWITCH_DB_ON_EXPAND)));
-        switchDatabaseOnExpand.setEnabled(showNonDefault.getSelection());
+        final boolean showNDD = CommonUtils.toBoolean(connectionInfo.getProviderProperty(PostgreConstants.PROP_SHOW_NON_DEFAULT_DB));
+        hideNonDefault.setSelection(showNDD);
 
         activated = true;
     }
@@ -248,8 +236,7 @@ public class PostgreConnectionPage extends ConnectionPageAbstract implements ICo
             connectionInfo.setClientHomeId(homesSelector.getSelectedHome());
         }
 
-        connectionInfo.setProviderProperty(PostgreConstants.PROP_SHOW_NON_DEFAULT_DB, String.valueOf(showNonDefault.getSelection()));
-        connectionInfo.setProviderProperty(PostgreConstants.PROP_SWITCH_DB_ON_EXPAND, String.valueOf(switchDatabaseOnExpand.getSelection()));
+        connectionInfo.setProviderProperty(PostgreConstants.PROP_SHOW_NON_DEFAULT_DB, String.valueOf(hideNonDefault.getSelection()));
         super.saveSettings(dataSource);
     }
 

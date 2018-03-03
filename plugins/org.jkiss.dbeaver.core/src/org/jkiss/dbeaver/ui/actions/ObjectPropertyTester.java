@@ -78,10 +78,6 @@ public class ObjectPropertyTester extends PropertyTester
                 if (node instanceof DBNResource) {
                     return property.equals(PROP_CAN_PASTE);
                 }
-                if (node instanceof DBNDataSource) {
-                    // We always can create datasource
-                    return true;
-                }
 
                 Class objectType;
                 if (!(node instanceof DBNContainer)) {

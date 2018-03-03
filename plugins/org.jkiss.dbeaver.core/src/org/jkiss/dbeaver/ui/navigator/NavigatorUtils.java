@@ -47,11 +47,15 @@ import org.jkiss.dbeaver.model.navigator.meta.DBXTreeNodeHandler;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.VoidProgressMonitor;
-import org.jkiss.dbeaver.model.struct.*;
+import org.jkiss.dbeaver.model.struct.DBSObject;
+import org.jkiss.dbeaver.model.struct.DBSObjectFilter;
+import org.jkiss.dbeaver.model.struct.DBSObjectSelector;
+import org.jkiss.dbeaver.model.struct.DBSWrapper;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
 import org.jkiss.dbeaver.ui.ActionUtils;
 import org.jkiss.dbeaver.ui.IActionConstants;
 import org.jkiss.dbeaver.ui.UIUtils;
+import org.jkiss.dbeaver.ui.actions.navigator.NavigatorActionSetActiveObject;
 import org.jkiss.dbeaver.ui.actions.navigator.NavigatorHandlerObjectOpen;
 import org.jkiss.dbeaver.ui.actions.navigator.NavigatorHandlerRefresh;
 import org.jkiss.dbeaver.ui.controls.ViewerColumnController;
@@ -69,6 +73,8 @@ import java.util.*;
  * Navigator utils
  */
 public class NavigatorUtils {
+
+    public static final String MB_NAVIGATOR_ADDITIONS = "navigator_additions";
 
     private static final Log log = Log.getLog(NavigatorUtils.class);
 
@@ -109,12 +115,12 @@ public class NavigatorUtils {
         }
     }
 
-    public static DBSObject getSelectedObject(ISelection selection)
+    public static DBSObject getSelectedObject(IStructuredSelection selection)
     {
-        if (selection.isEmpty() || !(selection instanceof IStructuredSelection)) {
+        if (selection.isEmpty()) {
             return null;
         }
-        return DBUtils.getFromObject(((IStructuredSelection)selection).getFirstElement());
+        return DBUtils.getFromObject(selection.getFirstElement());
     }
 
     public static List<DBSObject> getSelectedObjects(ISelection selection)
@@ -193,7 +199,7 @@ public class NavigatorUtils {
                     return;
                 }
 
-                manager.add(new GroupMarker(CoreCommands.GROUP_NAVIGATOR_ADDITIONS));
+                manager.add(new GroupMarker(MB_NAVIGATOR_ADDITIONS));
 
                 final IStructuredSelection selection = (IStructuredSelection)viewer.getSelection();
                 final DBNNode selectedNode = getSelectedNode(viewer);
@@ -208,7 +214,11 @@ public class NavigatorUtils {
                             if (activeChild != ((DBNDatabaseNode)selectedNode).getObject()) {
                                 DBNDatabaseNode databaseNode = (DBNDatabaseNode)selectedNode;
                                 if (databaseNode.getObject() != null && (activeChild == null || activeChild.getClass() == databaseNode.getObject().getClass())) {
-                                    manager.add(ActionUtils.makeCommandContribution(workbenchSite, CoreCommands.CMD_OBJECT_SET_ACTIVE));
+                                    String text = "Set Active ";// + databaseNode.getNodeType();
+                                    // Fill context menu
+                                    IAction action = ActionUtils.makeAction(new NavigatorActionSetActiveObject(), workbenchSite, selection, text, null, null);
+
+                                    manager.add(action);
                                 }
                             }
                         }
@@ -540,27 +550,6 @@ public class NavigatorUtils {
         return true;
     }
 
-    public static DBNDatabaseNode getNodeByObject(DBSObject object) {
-        return DBeaverCore.getInstance().getNavigatorModel().getNodeByObject(object);
-    }
-
-    public static DBNDatabaseNode getNodeByObject(DBRProgressMonitor monitor, DBSObject object, boolean addFiltered) {
-        return DBeaverCore.getInstance().getNavigatorModel().getNodeByObject(monitor, object, addFiltered);
-    }
-
-    public static DBNDatabaseNode getChildFolder(DBRProgressMonitor monitor, DBNDatabaseNode node, Class<?> folderType) {
-        try {
-            for (DBNDatabaseNode childNode : node.getChildren(monitor)) {
-                if (childNode instanceof DBNDatabaseFolder && folderType.getName().equals(((DBNDatabaseFolder) childNode).getMeta().getType())) {
-                    return childNode;
-                }
-            }
-        } catch (DBException e) {
-            log.error("Error reading child folder", e);
-        }
-        return null;
-    }
-
     public static DBNDataSource getDataSourceNode(DBNNode node) {
         for (DBNNode pn = node; pn != null; pn = pn.getParentNode()) {
             if (pn instanceof DBNDataSource) {
@@ -656,8 +645,8 @@ public class NavigatorUtils {
         static NodeFolderComparator INSTANCE = new NodeFolderComparator();
         @Override
         public int compare(DBNNode node1, DBNNode node2) {
-            int first = node1 instanceof DBNLocalFolder || node1 instanceof DBSFolder ? -1 : 1;
-            int second = node2 instanceof DBNLocalFolder || node2 instanceof DBSFolder ? -1 : 1;
+            int first = node1 instanceof DBNContainer ? -1 : 1;
+            int second = node2 instanceof DBNContainer ? -1 : 1;
             return first - second;
         }
     }

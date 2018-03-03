@@ -250,7 +250,7 @@ public class ContentEditorContributor extends MultiPageEditorActionBarContributo
                 });
                 IValueController valueController = editor.getValueController();
                 if (valueController != null) {
-                    valueController.updateValue(editor.getValue(), true);
+                    valueController.updateValue(editor.getContent(), true);
                 }
                 editor.setDirty(true);
                 editor.fireContentChanged();

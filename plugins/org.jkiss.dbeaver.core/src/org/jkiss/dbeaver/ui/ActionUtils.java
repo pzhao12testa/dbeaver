@@ -237,14 +237,8 @@ public class ActionUtils
 
                         ParameterizedCommand pc = new ParameterizedCommand(command, null);
                         handlerService.executeCommandInContext(pc, null, context);
-                    } else if (command != null) {
-                        if (command.isEnabled()) {
-                            handlerService.executeCommand(commandId, null);
-                        } else {
-                            log.warn("Command '" + commandId + "' is disabled");
-                        }
-                    } else {
-                        log.warn("Command '" + commandId + "' not found");
+                    } else if (command != null && command.isEnabled()) {
+                        handlerService.executeCommand(commandId, null);
                     }
                 }
             } catch (Exception e) {

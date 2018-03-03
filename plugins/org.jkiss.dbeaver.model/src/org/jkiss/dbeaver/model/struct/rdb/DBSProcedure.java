@@ -25,7 +25,7 @@ import org.jkiss.dbeaver.model.struct.DBSParametrizedObject;
 import java.util.Collection;
 
 /**
- * DBSProcedure
+ * DBSTableIndex
  */
 public interface DBSProcedure extends DBSParametrizedObject, DBPQualifiedObject
 {

@@ -18,10 +18,10 @@ package org.jkiss.dbeaver.model.impl.jdbc.struct;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
-import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.DBPDataKind;
 import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBUtils;
+import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.DBCLogicalOperator;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
@@ -126,7 +126,7 @@ public class JDBCDataType<OWNER extends DBSObject> implements DBSDataType
     }
 
     @Override
-    public Integer getScale()
+    public int getScale()
     {
         return minScale;
     }
@@ -142,7 +142,7 @@ public class JDBCDataType<OWNER extends DBSObject> implements DBSDataType
     }
 
     @Override
-    public Integer getPrecision()
+    public int getPrecision()
     {
         return precision;
     }
@@ -161,7 +161,7 @@ public class JDBCDataType<OWNER extends DBSObject> implements DBSDataType
 
     @Nullable
     @Override
-    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBCException {
         return null;
     }
 

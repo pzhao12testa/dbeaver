@@ -25,8 +25,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.progress.UIJob;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.core.CoreMessages;
-import org.jkiss.dbeaver.core.DBeaverUI;
-import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.data.DBDDataFilter;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
 import org.jkiss.dbeaver.model.exec.DBCExecutionPurpose;
@@ -47,8 +45,9 @@ class ResultSetJobDataRead extends ResultSetJobAbstract implements ILoadService<
     private int maxRows;
     private Throwable error;
     private DBCStatistics statistics;
+    private DBRProgressMonitor progressMonitor;
 
-    ResultSetJobDataRead(DBSDataContainer dataContainer, DBDDataFilter dataFilter, ResultSetViewer controller, DBCExecutionContext executionContext, Composite progressControl) {
+    protected ResultSetJobDataRead(DBSDataContainer dataContainer, DBDDataFilter dataFilter, ResultSetViewer controller, DBCExecutionContext executionContext, Composite progressControl) {
         super(CoreMessages.controls_rs_pump_job_name + " [" + dataContainer + "]", dataContainer, controller, executionContext);
         this.dataFilter = dataFilter;
         this.progressControl = progressControl;
@@ -78,31 +77,26 @@ class ResultSetJobDataRead extends ResultSetJobAbstract implements ILoadService<
     protected IStatus run(DBRProgressMonitor monitor) {
         error = null;
         final ProgressLoaderVisualizer<Object> visualizer = new ProgressLoaderVisualizer<>(this, progressControl);
-        DBRProgressMonitor progressMonitor = visualizer.overwriteMonitor(monitor);
-        DBCExecutionPurpose purpose = dataFilter != null && dataFilter.hasFilters() ? DBCExecutionPurpose.USER_FILTERED : DBCExecutionPurpose.USER;
-
+        progressMonitor = visualizer.overwriteMonitor(monitor);
+        DBCExecutionPurpose purpose = DBCExecutionPurpose.USER;
+        if (dataFilter != null && dataFilter.hasFilters()) {
+            purpose = DBCExecutionPurpose.USER_FILTERED;
+        }
         new PumpVisualizer(visualizer).schedule(PROGRESS_VISUALIZE_PERIOD * 2);
-
         try (DBCSession session = getExecutionContext().openSession(
             progressMonitor,
             purpose,
             NLS.bind(CoreMessages.controls_rs_pump_job_context_name, dataContainer.toString())))
         {
-            DBUtils.tryExecuteRecover(monitor, getDataContainer().getDataSource(), monitor1 -> {
-                try {
-                    statistics = dataContainer.readData(
-                        ResultSetJobDataRead.this,
-                        session,
-                        controller.getDataReceiver(),
-                        dataFilter,
-                        offset,
-                        maxRows,
-                        DBSDataContainer.FLAG_READ_PSEUDO
-                    );
-                } catch (Throwable e) {
-                    throw new InvocationTargetException(e);
-                }
-            });
+            statistics = dataContainer.readData(
+                this,
+                session,
+                controller.getDataReceiver(),
+                dataFilter,
+                offset,
+                maxRows,
+                DBSDataContainer.FLAG_READ_PSEUDO
+            );
         } catch (DBException e) {
             error = e;
         } finally {
@@ -128,14 +122,14 @@ class ResultSetJobDataRead extends ResultSetJobAbstract implements ILoadService<
         return getExecutionController();
     }
 
-    private static final int PROGRESS_VISUALIZE_PERIOD = 100;
+    protected static final int PROGRESS_VISUALIZE_PERIOD = 100;
 
     private class PumpVisualizer extends UIJob {
 
         private ProgressLoaderVisualizer<Object> visualizer;
 
-        PumpVisualizer(ProgressLoaderVisualizer<Object> visualizer) {
-            super(DBeaverUI.getDisplay(), "RSV Pump Visualizer");
+        public PumpVisualizer(ProgressLoaderVisualizer<Object> visualizer) {
+            super(progressControl.getDisplay(), "RSV Pump Visualizer");
             setSystem(true);
             this.visualizer = visualizer;
         }

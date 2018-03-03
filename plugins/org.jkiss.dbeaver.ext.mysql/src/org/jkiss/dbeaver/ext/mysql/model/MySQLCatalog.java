@@ -30,10 +30,8 @@ import org.jkiss.dbeaver.model.impl.jdbc.JDBCConstants;
 import org.jkiss.dbeaver.model.impl.jdbc.JDBCUtils;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCCompositeCache;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectCache;
-import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCObjectLookupCache;
 import org.jkiss.dbeaver.model.impl.jdbc.cache.JDBCStructLookupCache;
 import org.jkiss.dbeaver.model.meta.Association;
-import org.jkiss.dbeaver.model.meta.IPropertyValueListProvider;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.sql.SQLUtils;
@@ -137,7 +135,7 @@ public class MySQLCatalog implements DBSCatalog, DBPSaveableObject, DBPRefreshab
         return null;
     }
 
-    @Property(viewable = true, editable = true, updatable = true, listProvider = CharsetListProvider.class, order = 2)
+    @Property(viewable = true, order = 2)
     public MySQLCharset getDefaultCharset()
     {
         return defaultCharset;
@@ -148,7 +146,7 @@ public class MySQLCatalog implements DBSCatalog, DBPSaveableObject, DBPRefreshab
         this.defaultCharset = defaultCharset;
     }
 
-    @Property(viewable = true, editable = true, updatable = true, listProvider = CollationListProvider.class, order = 3)
+    @Property(viewable = true, order = 3)
     public MySQLCollation getDefaultCollation()
     {
         return defaultCollation;
@@ -159,7 +157,7 @@ public class MySQLCatalog implements DBSCatalog, DBPSaveableObject, DBPRefreshab
         this.defaultCollation = defaultCollation;
     }
 
-    @Property(viewable = true, order = 4)
+    @Property(viewable = true, order = 3)
     public String getSqlPath()
     {
         return sqlPath;
@@ -364,24 +362,18 @@ public class MySQLCatalog implements DBSCatalog, DBPSaveableObject, DBPRefreshab
                 }
             } else {
                 sql.append("SHOW FULL TABLES FROM ").append(DBUtils.getQuotedIdentifier(owner));
-                String tableNameCol = DBUtils.getQuotedIdentifier(owner.getDataSource(), "Tables_in_" + owner.getName());
+                String tableNameCol = "Tables_in_" + owner.getName();
                 if (object != null || objectName != null) {
                     sql.append(" WHERE ").append(tableNameCol).append(" LIKE ").append(SQLUtils.quoteString(session.getDataSource(), object != null ? object.getName() : objectName));
                 } else {
                     DBSObjectFilter tableFilters = owner.getDataSource().getContainer().getObjectFilter(MySQLTable.class, owner, false);
                     if (tableFilters != null && !tableFilters.isEmpty()) {
-                        sql.append(" WHERE ");
-                        boolean hasCond = false;
+                        sql.append(" WHERE 1=1");
                         for (String incName : CommonUtils.safeCollection(tableFilters.getInclude())) {
-                            if (hasCond) sql.append(" OR ");
-                            hasCond = true;
-                            sql.append(tableNameCol).append(" LIKE ").append(SQLUtils.quoteString(session.getDataSource(), incName));
+                            sql.append(" AND ").append(tableNameCol).append(" LIKE ").append(SQLUtils.quoteString(session.getDataSource(), incName));
                         }
-                        hasCond = false;
                         for (String incName : CommonUtils.safeCollection(tableFilters.getExclude())) {
-                            if (hasCond) sql.append(" OR ");
-                            hasCond = true;
-                            sql.append(tableNameCol).append(" NOT LIKE ").append(SQLUtils.quoteString(session.getDataSource(), incName));
+                            sql.append(" AND ").append(tableNameCol).append(" NOT LIKE ").append(SQLUtils.quoteString(session.getDataSource(), incName));
                         }
                     }
                 }
@@ -684,30 +676,24 @@ public class MySQLCatalog implements DBSCatalog, DBPSaveableObject, DBPRefreshab
         }
     }
 
-    static class TriggerCache extends JDBCObjectLookupCache<MySQLCatalog, MySQLTrigger> {
+    static class TriggerCache extends JDBCObjectCache<MySQLCatalog, MySQLTrigger> {
+        @Override
+        protected JDBCStatement prepareObjectsStatement(@NotNull JDBCSession session, @NotNull MySQLCatalog owner)
+            throws SQLException
+        {
+            return session.prepareStatement(
+                "SHOW FULL TRIGGERS FROM " + DBUtils.getQuotedIdentifier(owner));
+        }
 
         @Override
         protected MySQLTrigger fetchObject(@NotNull JDBCSession session, @NotNull MySQLCatalog owner, @NotNull JDBCResultSet dbResult)
             throws SQLException, DBException
         {
-            String tableName = JDBCUtils.safeGetString(dbResult, "EVENT_OBJECT_TABLE");
+            String tableName = JDBCUtils.safeGetString(dbResult, "TABLE");
             MySQLTable triggerTable = CommonUtils.isEmpty(tableName) ? null : owner.getTable(session.getProgressMonitor(), tableName);
             return new MySQLTrigger(owner, triggerTable, dbResult);
         }
 
-        @Override
-        public JDBCStatement prepareLookupStatement(JDBCSession session, MySQLCatalog owner, MySQLTrigger object, String objectName) throws SQLException {
-            JDBCPreparedStatement dbStat = session.prepareStatement(
-                "SELECT * FROM INFORMATION_SCHEMA.TRIGGERS\n" +
-                    "WHERE TRIGGER_SCHEMA = ?" +
-                    (object == null && objectName == null ? "" : " \nAND TRIGGER_NAME = ?")
-            );
-            dbStat.setString(1, owner.getName());
-            if (object != null || objectName != null) {
-                dbStat.setString(2, object != null ? object.getName() : objectName);
-            }
-            return dbStat;
-        }
     }
 
     static class EventCache extends JDBCObjectCache<MySQLCatalog, MySQLEvent> {
@@ -728,36 +714,6 @@ public class MySQLCatalog implements DBSCatalog, DBPSaveableObject, DBPRefreshab
             return new MySQLEvent(owner, dbResult);
         }
 
-    }
-
-    public static class CharsetListProvider implements IPropertyValueListProvider<MySQLCatalog> {
-        @Override
-        public boolean allowCustomValue()
-        {
-            return false;
-        }
-        @Override
-        public Object[] getPossibleValues(MySQLCatalog object)
-        {
-            return object.getDataSource().getCharsets().toArray();
-        }
-    }
-
-    public static class CollationListProvider implements IPropertyValueListProvider<MySQLCatalog> {
-        @Override
-        public boolean allowCustomValue()
-        {
-            return false;
-        }
-        @Override
-        public Object[] getPossibleValues(MySQLCatalog object)
-        {
-            if (object.defaultCharset == null) {
-                return null;
-            } else {
-                return object.defaultCharset.getCollations().toArray();
-            }
-        }
     }
 
 }

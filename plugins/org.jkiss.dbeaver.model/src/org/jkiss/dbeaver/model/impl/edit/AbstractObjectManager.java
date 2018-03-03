@@ -38,15 +38,14 @@ public abstract class AbstractObjectManager<OBJECT_TYPE extends DBSObject> imple
     {
         String script = action.getScript();
         if (script == null) {
-            action.afterExecute(session, null);
+            action.handleExecute(session, null);
         } else {
             DBCStatement dbStat = DBUtils.createStatement(session, script, false);
             try {
-                action.beforeExecute(session);
                 dbStat.executeStatement();
-                action.afterExecute(session, null);
+                action.handleExecute(session, null);
             } catch (DBCException e) {
-                action.afterExecute(session, e);
+                action.handleExecute(session, e);
                 throw e;
             } finally {
                 dbStat.close();

@@ -61,9 +61,6 @@ public class SQLCompletionProposal implements ICompletionProposal, ICompletionPr
     private String replacementString;
     private String replacementFull;
     private String replacementLast;
-    // Tail
-    private String replacementAfter;
-
     /** The replacement offset. */
     private int replacementOffset;
     /** The replacement length. */
@@ -97,7 +94,7 @@ public class SQLCompletionProposal implements ICompletionProposal, ICompletionPr
         this.replacementString = replacementString;
         this.replacementFull = this.dataSource == null ?
                 replacementString :
-                DBUtils.getUnQuotedIdentifier(this.dataSource, replacementString.toLowerCase(Locale.ENGLISH)); // Convert to lower to compare IN VALIDATE FUNCTION
+                DBUtils.getUnQuotedIdentifier(this.dataSource, replacementString.toLowerCase(Locale.ENGLISH));
         int divPos = this.replacementFull.lastIndexOf(syntaxManager.getStructSeparator());
         if (divPos == -1) {
             this.replacementLast = null;
@@ -136,16 +133,9 @@ public class SQLCompletionProposal implements ICompletionProposal, ICompletionPr
             startOffset = wordDetector.getStartOffset();
         }
         if (endOffset != -1) {
-            // Replace from identifier start till next struct separator
             endOffset += wordDetector.getStartOffset();
         } else {
-            // Replace from identifier start to the end of current identifier
-            if (wordDetector.getWordPart().isEmpty()) {
-                endOffset = wordDetector.getCursorOffset();
-            } else {
-                // Replace from identifier start to the end of current identifier
-                endOffset = wordDetector.getEndOffset();
-            }
+            endOffset = wordDetector.getCursorOffset();//wordDetector.getEndOffset();
         }
         replacementOffset = startOffset;
         replacementLength = endOffset - startOffset;
@@ -154,30 +144,26 @@ public class SQLCompletionProposal implements ICompletionProposal, ICompletionPr
     @Override
     public void apply(IDocument document) {
         try {
-            String replaceOn = replacementString;
-            if (replacementAfter != null) {
-                replaceOn += replacementAfter;
-            }
             if (dataSource != null) {
                 if (dataSource.getContainer().getPreferenceStore().getBoolean(SQLPreferenceConstants.INSERT_SPACE_AFTER_PROPOSALS)) {
-                    boolean insertTrailingSpace;
+                    boolean insertTrailingSpace = true;
                     if (object instanceof DBSObjectContainer) {
                         // Do not append trailing space after schemas/catalogs/etc.
                     } else {
                         int docLen = document.getLength();
                         if (docLen <= replacementOffset + replacementLength + 2) {
-                            insertTrailingSpace = true;
+                            insertTrailingSpace = false;
                         } else {
                             insertTrailingSpace = document.getChar(replacementOffset + replacementLength) != ' ';
                         }
                         if (insertTrailingSpace) {
-                            replaceOn += " ";
+                            replacementString += " ";
                         }
                         cursorPosition++;
                     }
                 }
             }
-            document.replace(replacementOffset, replacementLength, replaceOn);
+            document.replace(replacementOffset, replacementLength, replacementString);
         } catch (BadLocationException e) {
             // ignore
             log.debug(e);
@@ -189,11 +175,7 @@ public class SQLCompletionProposal implements ICompletionProposal, ICompletionPr
      */
     @Override
     public Point getSelection(IDocument document) {
-        int newOffset = replacementOffset + cursorPosition + (replacementAfter == null ? 0 : replacementAfter.length());
-        if (newOffset > document.getLength()) {
-            newOffset = document.getLength();
-        }
-        return new Point(newOffset, 0);
+        return new Point(replacementOffset + cursorPosition, 0);
     }
 
     @Override
@@ -302,7 +284,4 @@ public class SQLCompletionProposal implements ICompletionProposal, ICompletionPr
     }
 
 
-    public void setReplacementAfter(String replacementAfter) {
-        this.replacementAfter = replacementAfter;
-    }
 }

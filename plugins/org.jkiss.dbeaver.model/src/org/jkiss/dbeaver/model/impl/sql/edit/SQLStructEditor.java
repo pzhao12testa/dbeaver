@@ -34,7 +34,7 @@ public abstract class SQLStructEditor<OBJECT_TYPE extends DBSObject, CONTAINER_T
     implements DBEStructEditor<OBJECT_TYPE>
 {
 
-    protected abstract void addStructObjectCreateActions(List<DBEPersistAction> actions, StructCreateCommand command, Map<String, Object> options);
+    protected abstract void addStructObjectCreateActions(List<DBEPersistAction> actions, StructCreateCommand command);
 
     @Override
     public StructCreateCommand makeCreateCommand(OBJECT_TYPE object)
@@ -81,7 +81,7 @@ public abstract class SQLStructEditor<OBJECT_TYPE extends DBSObject, CONTAINER_T
         for (Class childType : getChildTypes()) {
             Collection<? extends DBSObject> children = getChildObjects(monitor, object, childType);
             if (!CommonUtils.isEmpty(children)) {
-                SQLObjectEditor<DBSObject, ?> nestedEditor = getObjectEditor(editorsRegistry, childType);
+                SQLObjectEditor<DBSObject, CONTAINER_TYPE> nestedEditor = getObjectEditor(editorsRegistry, childType);
                 if (nestedEditor != null) {
                     for (DBSObject child : children) {
                         ObjectCreateCommand childCreateCommand = (ObjectCreateCommand) nestedEditor.makeCreateCommand(child);
@@ -147,11 +147,11 @@ public abstract class SQLStructEditor<OBJECT_TYPE extends DBSObject, CONTAINER_T
         }
 
         @Override
-        public DBEPersistAction[] getPersistActions(Map<String, Object> options)
+        public DBEPersistAction[] getPersistActions()
         {
             List<DBEPersistAction> actions = new ArrayList<>();
-            addStructObjectCreateActions(actions, this, options);
-            addObjectExtraActions(actions, this, options);
+            addStructObjectCreateActions(actions, this);
+            addObjectExtraActions(actions, this);
             return actions.toArray(new DBEPersistAction[actions.size()]);
         }
     }

@@ -387,9 +387,6 @@
                         <file name="db2jcc4.jar" description="JDBC driver"/>
                     </fileSource>
 -->
-                    <file type="license" path="drivers/db2/LICENSE.txt" bundle="drivers.db2"/>
-                    <file type="jar" path="drivers/db2/db2jcc4.jar" bundle="drivers.db2"/>
-
                 </driver>
             </drivers>
 
@@ -422,7 +419,7 @@
                 position="additions_middle"
                 contributor="org.jkiss.dbeaver.ui.editors.sql.SQLEditorContributorNested" 
                 type="folder"
-                embeddable="false">
+                embeddable="true">
             <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2MaterializedQueryTable"/>
             <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2TableCheckConstraint"/>
             <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2Trigger"/>
@@ -496,7 +493,6 @@
 
     <extension point="org.jkiss.dbeaver.tools">
         <tools>
-            <toolGroup id="org.jkiss.dbeaver.ext.db2.tools.maintenance" label="Statistics"/>
             <tool
                     class="org.jkiss.dbeaver.ext.db2.tools.DB2ToolShowError"
                     description="Display SQL Error Message"
@@ -509,7 +505,6 @@
                     class="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2RunstatsTool"
                     description="Runstats"
                     id="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2RunstatsTool"
-                    group="org.jkiss.dbeaver.ext.db2.tools.maintenance"
                     label="%tool.org.jkiss.dbeaver.ext.db2.table.runstats.name"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2Table"/>
@@ -518,7 +513,6 @@
                     class="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2ReorgTableTool"
                     description="Reorg table"
                     id="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2ReorgTableTool"
-                    group="org.jkiss.dbeaver.ext.db2.tools.maintenance"
                     label="%tool.org.jkiss.dbeaver.ext.db2.table.reorg.name"
                     singleton="true">
                 <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2Table"/>
@@ -527,7 +521,6 @@
                     class="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2ReorgIndexTool"
                     description="Reorg index"
                     id="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2ReorgIndexTool"
-                    group="org.jkiss.dbeaver.ext.db2.tools.maintenance"
                     label="%tool.org.jkiss.dbeaver.ext.db2.table.reorgix.name"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2Table"/>
@@ -536,7 +529,6 @@
                     class="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2ReorgCheckTableTool"
                     description="Reorg check table"
                     id="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2ReorgCheckTableTool"
-                    group="org.jkiss.dbeaver.ext.db2.tools.maintenance"
                     label="%tool.org.jkiss.dbeaver.ext.db2.table.reorgcheck.name"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2Table"/>
@@ -545,7 +537,6 @@
                     class="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2TruncateTool"
                     description="Truncate table"
                     id="org.jkiss.dbeaver.ext.db2.tools.maintenance.DB2Truncate"
-                    group="org.jkiss.dbeaver.ext.db2.tools.maintenance"
                     label="%tool.org.jkiss.dbeaver.ext.db2.table.truncate.name"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.db2.model.DB2Table"/>
@@ -556,7 +547,7 @@
 
     <extension point="org.eclipse.ui.editors">
         <editor
-            name="%editor.org.jkiss.dbeaver.ext.db2.model.app.DB2ServerApplicationEditor.name"
+            name="Application Manager"
             icon="icons/compile.png"
             class="org.jkiss.dbeaver.ext.db2.model.app.DB2ServerApplicationEditor"
             id="org.jkiss.dbeaver.ext.db2.model.app.DB2ServerApplicationEditor">

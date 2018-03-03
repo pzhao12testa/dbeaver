@@ -35,7 +35,6 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.model.DBPImage;
 import org.jkiss.dbeaver.model.exec.DBCExecutionContext;
-import org.jkiss.dbeaver.model.impl.sql.BasicSQLDialect;
 import org.jkiss.dbeaver.model.sql.SQLDataSource;
 import org.jkiss.dbeaver.model.sql.SQLDialect;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
@@ -128,7 +127,7 @@ public abstract class BaseSQLDialog extends BaseDialog {
         if (executionContext != null && executionContext.getDataSource() instanceof SQLDataSource) {
             return ((SQLDataSource) executionContext.getDataSource()).getSQLDialect();
         }
-        return BasicSQLDialect.INSTANCE;
+        return null;
     }
 
     protected abstract DBCExecutionContext getExecutionContext();

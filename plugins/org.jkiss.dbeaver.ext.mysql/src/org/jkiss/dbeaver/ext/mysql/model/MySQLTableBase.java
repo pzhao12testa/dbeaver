@@ -35,6 +35,7 @@ import org.jkiss.dbeaver.model.struct.DBSEntityAttribute;
 import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.utils.CommonUtils;
 
+import java.io.UnsupportedEncodingException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -125,21 +126,32 @@ public abstract class MySQLTableBase extends JDBCTable<MySQLDataSource, MySQLCat
         return getContainer().tableCache.refreshObject(monitor, getContainer(), this);
     }
 
-    public String getDDL(DBRProgressMonitor monitor, Map<String, Object> options)
+    public String getDDL(DBRProgressMonitor monitor)
         throws DBException
     {
         if (!isPersisted()) {
-            return JDBCUtils.generateTableDDL(monitor, this, options, false);
+            return JDBCUtils.generateTableDDL(monitor, this, false);
         }
         try (JDBCSession session = DBUtils.openMetaSession(monitor, getDataSource(), "Retrieve table DDL")) {
             try (PreparedStatement dbStat = session.prepareStatement(
                 "SHOW CREATE " + (isView() ? "VIEW" : "TABLE") + " " + getFullyQualifiedName(DBPEvaluationContext.DDL))) {
                 try (ResultSet dbResult = dbStat.executeQuery()) {
                     if (dbResult.next()) {
+                        byte[] ddl;
                         if (isView()) {
-                            return dbResult.getString("Create View");
+                            ddl = dbResult.getBytes("Create View");
                         } else {
-                            return dbResult.getString("Create Table");
+                            ddl = dbResult.getBytes("Create Table");
+                        }
+                        if (ddl == null) {
+                            return null;
+                        } else {
+                            try {
+                                return new String(ddl, getContainer().getDefaultCharset().getName());
+                            } catch (UnsupportedEncodingException e) {
+                                log.debug(e);
+                                return new String(ddl);
+                            }
                         }
                     } else {
                         return "DDL is not available";

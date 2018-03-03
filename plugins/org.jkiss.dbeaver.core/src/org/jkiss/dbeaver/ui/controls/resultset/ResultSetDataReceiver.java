@@ -48,7 +48,6 @@ class ResultSetDataReceiver implements DBDDataReceiver {
     private Map<DBCAttributeMetaData, List<String>> attrErrors = new HashMap<>();
     // All (unique) errors happened during fetch
     private List<Throwable> errorList = new ArrayList<>();
-    private int focusRow;
 
     ResultSetDataReceiver(ResultSetViewer resultSetViewer)
     {
@@ -155,11 +154,11 @@ class ResultSetDataReceiver implements DBDDataReceiver {
                 // Push data into viewer
                 if (!nextSegmentRead) {
                     resultSetViewer.updatePresentation(resultSet);
-                    resultSetViewer.setData(tmpRows, focusRow);
+                    resultSetViewer.setData(tmpRows);
                     resultSetViewer.getActivePresentation().refreshData(true, false, !resultSetViewer.getModel().isMetadataChanged());
                 } else {
                     resultSetViewer.appendData(tmpRows);
-                    resultSetViewer.getActivePresentation().refreshData(false, true, true);
+                    resultSetViewer.getActivePresentation().refreshData(false, true, false);
                 }
                 resultSetViewer.updateStatusMessage();
                 // Check for more data
@@ -177,7 +176,4 @@ class ResultSetDataReceiver implements DBDDataReceiver {
         rows = new ArrayList<>();
     }
 
-    public void setFocusRow(int focusRow) {
-        this.focusRow = focusRow;
-    }
 }

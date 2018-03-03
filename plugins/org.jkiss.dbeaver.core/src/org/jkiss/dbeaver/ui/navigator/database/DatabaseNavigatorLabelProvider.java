@@ -22,8 +22,6 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
-import org.jkiss.dbeaver.DBeaverPreferences;
-import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.model.DBPDataSourceContainer;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.navigator.DBNDataSource;
@@ -38,16 +36,16 @@ import org.jkiss.utils.CommonUtils;
 /**
  * DatabaseNavigatorLabelProvider
 */
-public class DatabaseNavigatorLabelProvider extends ColumnLabelProvider implements IFontProvider, IColorProvider
+class DatabaseNavigatorLabelProvider extends ColumnLabelProvider implements IFontProvider, IColorProvider
 {
-    protected Font normalFont;
-    protected Font boldFont;
-    protected Font italicFont;
+    private Font normalFont;
+    private Font boldFont;
+    private Font italicFont;
     //private Font boldItalicFont;
-    protected Color lockedForeground;
-    protected Color transientForeground;
+    private Color lockedForeground;
+    private Color transientForeground;
 
-    public DatabaseNavigatorLabelProvider(Viewer viewer)
+    DatabaseNavigatorLabelProvider(Viewer viewer)
     {
         //this.view = view;
         this.normalFont = viewer.getControl().getFont();
@@ -82,12 +80,6 @@ public class DatabaseNavigatorLabelProvider extends ColumnLabelProvider implemen
 */
         } else if (obj instanceof DBNNode) {
             text = ((DBNNode) obj).getNodeName();
-            if (DBeaverCore.getGlobalPreferenceStore().getBoolean(DBeaverPreferences.NAVIGATOR_SHOW_OBJECT_TIPS)) {
-                String briefInfo = ((DBNNode) obj).getNodeBriefInfo();
-                if (!CommonUtils.isEmpty(briefInfo)) {
-                    text += " (" + briefInfo + ")";
-                }
-            }
         } else if (obj != null) {
             text = obj.toString();
         }

@@ -124,7 +124,7 @@ public class DBNProjectDatabases extends DBNNode implements DBNContainer, DBPEve
     @Override
     public DBPImage getNodeIcon()
     {
-        return DBIcon.TREE_DATABASE_CATEGORY;
+        return DBIcon.CONNECTIONS;
     }
 
     @Override

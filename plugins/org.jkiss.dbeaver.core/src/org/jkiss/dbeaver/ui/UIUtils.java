@@ -16,6 +16,9 @@
  */
 package org.jkiss.dbeaver.ui;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProduct;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.action.*;
 import org.eclipse.jface.bindings.keys.KeyStroke;
 import org.eclipse.jface.bindings.keys.ParseException;
@@ -29,7 +32,6 @@ import org.eclipse.jface.resource.ColorRegistry;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.resource.StringConverter;
-import org.eclipse.jface.text.IFindReplaceTarget;
 import org.eclipse.jface.viewers.CellEditor;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.window.IShellProvider;
@@ -52,7 +54,6 @@ import org.eclipse.ui.handlers.IHandlerService;
 import org.eclipse.ui.services.IServiceLocator;
 import org.eclipse.ui.swt.IFocusService;
 import org.eclipse.ui.texteditor.AbstractTextEditor;
-import org.eclipse.ui.texteditor.FindReplaceAction;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.Log;
@@ -60,9 +61,7 @@ import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.core.DBeaverActivator;
 import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.core.DBeaverUI;
-import org.jkiss.dbeaver.model.DBIcon;
-import org.jkiss.dbeaver.model.DBPImage;
-import org.jkiss.dbeaver.model.DBPNamedObject;
+import org.jkiss.dbeaver.model.*;
 import org.jkiss.dbeaver.model.connection.DBPConnectionConfiguration;
 import org.jkiss.dbeaver.model.connection.DBPConnectionType;
 import org.jkiss.dbeaver.model.meta.IPropertyValueListProvider;
@@ -82,8 +81,8 @@ import java.nio.charset.Charset;
 import java.text.DecimalFormatSymbols;
 import java.text.MessageFormat;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Locale;
-import java.util.ResourceBundle;
 import java.util.SortedMap;
 
 /**
@@ -132,29 +131,6 @@ public class UIUtils {
                     }
                 }
                 e.doit = true;
-            }
-        };
-    }
-
-    public static VerifyListener getLongVerifyListener(Text text) {
-        return new VerifyListener() {
-            @Override
-            public void verifyText(VerifyEvent e) {
-
-                // get old text and create new text by using the VerifyEvent.text
-                final String oldS = text.getText();
-                String newS = oldS.substring(0, e.start) + e.text + oldS.substring(e.end);
-
-                boolean isLong = true;
-                try {
-                    Long.parseLong(newS);
-                }
-                catch(NumberFormatException ex) {
-                    isLong = false;
-                }
-
-                if(!isLong)
-                    e.doit = false;
             }
         };
     }
@@ -258,24 +234,15 @@ public class UIUtils {
                     return;
                 }
             }
-            final TreeColumn[] columns = tree.getColumns();
-            for (TreeColumn column : columns) {
-                column.pack();
-            }
-
             Rectangle clientArea = tree.getClientArea();
             if (clientArea.isEmpty()) {
                 return;
             }
             int totalWidth = 0;
+            final TreeColumn[] columns = tree.getColumns();
             for (TreeColumn column : columns) {
-                int colWidth = column.getWidth();
-                if (colWidth > clientArea.width) {
-                    // Too wide column - make it a bit narrower
-                    colWidth = clientArea.width;
-                    column.setWidth(colWidth);
-                }
-                totalWidth += colWidth;
+                column.pack();
+                totalWidth += column.getWidth();
             }
             if (fit) {
                 int areaWidth = clientArea.width;
@@ -370,6 +337,33 @@ public class UIUtils {
             }
         }
         return -1;
+    }
+
+    public static void sortTable(Table table, Comparator<TableItem> comparator)
+    {
+        int columnCount = table.getColumnCount();
+        String[] values = new String[columnCount];
+        TableItem[] items = table.getItems();
+        for (int i = 1; i < items.length; i++) {
+            for (int j = 0; j < i; j++) {
+                TableItem item = items[i];
+                if (comparator.compare(item, items[j]) < 0) {
+                    for (int k = 0; k < columnCount; k++) {
+                        values[k] = item.getText(k);
+                    }
+                    Object data = item.getData();
+                    boolean checked = item.getChecked();
+                    item.dispose();
+
+                    item = new TableItem(table, SWT.NONE, j);
+                    item.setText(values);
+                    item.setData(data);
+                    item.setChecked(checked);
+                    items = table.getItems();
+                    break;
+                }
+            }
+        }
     }
 
     public static TableItem getNextTableItem(Table table, TableItem item) {
@@ -495,8 +489,7 @@ public class UIUtils {
     {
         Label textLabel = new Label(parent, SWT.NONE);
         textLabel.setText(label + ": "); //$NON-NLS-1$
-        // TODO: Should we make it right-aligned? Looks good but not in Eclipse-style
-        textLabel.setLayoutData(new GridData(GridData.VERTICAL_ALIGN_CENTER /*| GridData.HORIZONTAL_ALIGN_END*/));
+        textLabel.setLayoutData(new GridData(GridData.VERTICAL_ALIGN_CENTER));
         return textLabel;
     }
 
@@ -859,12 +852,6 @@ public class UIUtils {
     @NotNull
     public static Button createPushButton(@NotNull Composite parent, @Nullable String label, @Nullable Image image)
     {
-        return createPushButton(parent, label, image, null);
-    }
-
-    @NotNull
-    public static Button createPushButton(@NotNull Composite parent, @Nullable String label, @Nullable Image image, @Nullable SelectionListener selectionListener)
-    {
         Button button = new Button(parent, SWT.PUSH);
         if (label != null) {
             button.setText(label);
@@ -872,12 +859,8 @@ public class UIUtils {
         if (image != null) {
             button.setImage(image);
         }
-        if (selectionListener != null) {
-            button.addSelectionListener(selectionListener);
-        }
         return button;
     }
-
 
     public static void setHelp(Control control, String pluginId, String helpContextID)
     {
@@ -924,6 +907,31 @@ public class UIUtils {
         Clipboard clipboard = new Clipboard(display);
         clipboard.setContents(new Object[] { contents }, new Transfer[] { transfer });
         clipboard.dispose();
+    }
+
+    public static void updateMainWindowTitle(IWorkbenchWindow window)
+    {
+        if (window == null) {
+            return;
+        }
+        Shell shell = window.getShell();
+        if (shell == null) {
+            return;
+        }
+        IProject activeProject = DBeaverCore.getInstance().getProjectRegistry().getActiveProject();
+        IProduct product = Platform.getProduct();
+        String title = product == null ? "Unknown" : product.getName(); //$NON-NLS-1$
+        if (activeProject != null) {
+            title += " - " + activeProject.getName(); //$NON-NLS-1$
+        }
+        IWorkbenchPage activePage = window.getActivePage();
+        if (activePage != null) {
+            IEditorPart activeEditor = activePage.getActiveEditor();
+            if (activeEditor != null) {
+                title += " - [ " + activeEditor.getTitle() + " ]";
+            }
+        }
+        shell.setText(title);
     }
 
     public static void showPreferencesFor(Shell shell, Object element, String ... defPageID)
@@ -990,50 +998,6 @@ public class UIUtils {
             section = parent.addNewSection(sectionId);
         }
         return section;
-    }
-
-    public static void putSectionValueWithType(IDialogSettings dialogSettings, @NotNull String key, Object value) {
-        if (value == null) {
-            dialogSettings.put(key, ((String) null));
-            return;
-        }
-
-        if (value instanceof Double) {
-            dialogSettings.put(key, (Double) value);
-        } else
-        if (value instanceof Float) {
-            dialogSettings.put(key, (Float) value);
-        } else
-        if (value instanceof Integer) {
-            dialogSettings.put(key, (Integer) value);
-        } else
-        if (value instanceof Long) {
-            dialogSettings.put(key, (Long) value);
-        } else
-        if (value instanceof String) {
-            dialogSettings.put(key, (String) value);
-        } else
-        if (value instanceof Boolean) {
-            dialogSettings.put(key, (Boolean) value);
-        } else {
-            // do nothing
-        }
-        dialogSettings.put(key + "_type", value.getClass().getSimpleName());
-    }
-
-    public static Object getSectionValueWithType(IDialogSettings dialogSettings, @NotNull String key) {
-        String type = dialogSettings.get(key + "_type");
-        if (type != null) {
-            switch (type) {
-                case "Double": return dialogSettings.getDouble(key);
-                case "Float": return dialogSettings.getFloat(key);
-                case "Integer": return dialogSettings.getInt(key);
-                case "Long": return dialogSettings.getLong(key);
-                case "String": return dialogSettings.get(key);
-                case "Boolean": return dialogSettings.getBoolean(key);
-            }
-        }
-        return dialogSettings.get(key);
     }
 
     @Nullable
@@ -1339,9 +1303,9 @@ public class UIUtils {
         e.gc.drawText(message, (bounds.width - ext.x) / 2, bounds.height / 3 + offset);
     }
 
-    public static boolean launchProgram(String path)
+    public static void launchProgram(String path)
     {
-        return Program.launch(path);
+        Program.launch(path);
     }
 
     public static void fillDefaultStyledTextContextMenu(final StyledText text) {
@@ -1363,12 +1327,6 @@ public class UIUtils {
         menu.add(new StyledTextAction(IWorkbenchCommandConstants.EDIT_PASTE, text.getEditable(), text, ST.PASTE));
         menu.add(new StyledTextAction(IWorkbenchCommandConstants.EDIT_CUT, selectionRange.y > 0, text, ST.CUT));
         menu.add(new StyledTextAction(IWorkbenchCommandConstants.EDIT_SELECT_ALL, true, text, ST.SELECT_ALL));
-        IFindReplaceTarget stFindReplaceTarget = new StyledTextFindReplaceTarget(text);
-        menu.add(new FindReplaceAction(
-            ResourceBundle.getBundle("org.eclipse.ui.texteditor.ConstructedEditorMessages"),
-            "Editor.FindReplace.",
-            text.getShell(),
-            stFindReplaceTarget));
         menu.add(new GroupMarker("styled_text_additions"));
     }
 
@@ -1377,13 +1335,9 @@ public class UIUtils {
             @Override
             public void run() {
                 StringBuilder text = new StringBuilder();
-                int columnCount = table.getColumnCount();
                 for (TableItem item : table.getSelection()) {
                     if (text.length() > 0) text.append("\n");
-                    for (int i = 0 ; i < columnCount; i++) {
-                        if (i > 0) text.append("\t");
-                        text.append(item.getText(i));
-                    }
+                    text.append(item.getText());
                 }
                 UIUtils.setClipboardContents(table.getDisplay(), TextTransfer.getInstance(), text.toString());
             }
@@ -1400,31 +1354,6 @@ public class UIUtils {
                 e.gc.drawImage(browseImage, bounds.width - iconBounds.width - 2, 0);
             }
         });
-    }
-
-    public static Combo createDelimiterCombo(Composite group, String label, String[] options, String defDelimiter, boolean multiDelims) {
-        createControlLabel(group, label);
-        Combo combo = new Combo(group, SWT.BORDER | SWT.DROP_DOWN);
-        combo.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-        for (String option : options) {
-            combo.add(CommonUtils.escapeDisplayString(option));
-        }
-        if (!multiDelims) {
-            if (!ArrayUtils.contains(options, defDelimiter)) {
-                combo.add(CommonUtils.escapeDisplayString(defDelimiter));
-            }
-            String[] items = combo.getItems();
-            for (int i = 0, itemsLength = items.length; i < itemsLength; i++) {
-                String delim = CommonUtils.unescapeDisplayString(items[i]);
-                if (delim.equals(defDelimiter)) {
-                    combo.select(i);
-                    break;
-                }
-            }
-        } else {
-            combo.setText(CommonUtils.escapeDisplayString(defDelimiter));
-        }
-        return combo;
     }
 
     private static class StyledTextAction extends Action {
@@ -1521,11 +1450,11 @@ public class UIUtils {
     public static void setContentProposalToolTip(Control control, String toolTip, String ... variables) {
         StringBuilder varsTip = new StringBuilder();
         for (String var : variables) {
-            if (varsTip.length() > 0) varsTip.append(",\n");
-            varsTip.append("\t").append(GeneralUtils.variablePattern(var));
+            if (varsTip.length() > 0) varsTip.append(", ");
+            varsTip.append(GeneralUtils.variablePattern(var));
         }
         varsTip.append(".");
-        control.setToolTipText(toolTip + ". Allowed variables:\n" + varsTip);
+        control.setToolTipText(toolTip + ".\nAllowed variables: " + varsTip);
 
     }
 

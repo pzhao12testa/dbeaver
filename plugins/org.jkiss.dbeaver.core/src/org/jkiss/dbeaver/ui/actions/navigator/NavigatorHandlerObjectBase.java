@@ -50,7 +50,10 @@ import org.jkiss.dbeaver.ui.navigator.database.DatabaseNavigatorView;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 public abstract class NavigatorHandlerObjectBase extends AbstractHandler {
 
@@ -190,15 +193,12 @@ public abstract class NavigatorHandlerObjectBase extends AbstractHandler {
         return result;
     }
 
-    protected static boolean showScript(IWorkbenchWindow workbenchWindow, DBECommandContext commandContext, Map<String, Object> options, String dialogTitle)
+    protected static boolean showScript(IWorkbenchWindow workbenchWindow, DBECommandContext commandContext, String dialogTitle)
     {
         Collection<? extends DBECommand> commands = commandContext.getFinalCommands();
         StringBuilder script = new StringBuilder();
         for (DBECommand command : commands) {
-            script.append(
-                SQLUtils.generateScript(commandContext.getExecutionContext().getDataSource(),
-                    command.getPersistActions(options),
-                    false));
+            script.append(SQLUtils.generateScript(commandContext.getExecutionContext().getDataSource(), command.getPersistActions(), false));
         }
         DatabaseNavigatorView view = UIUtils.findView(workbenchWindow, DatabaseNavigatorView.class);
         if (view != null) {
@@ -255,18 +255,17 @@ public abstract class NavigatorHandlerObjectBase extends AbstractHandler {
 
     protected static class ObjectSaver implements DBRRunnableWithProgress {
         private final DBECommandContext commander;
-        private Map<String, Object> options;
 
-        public ObjectSaver(DBECommandContext commander, Map<String, Object> options) {
-            this.commander = commander;
-            this.options = options;
+        public ObjectSaver(DBECommandContext commandContext)
+        {
+            this.commander = commandContext;
         }
 
         @Override
         public void run(DBRProgressMonitor monitor) throws InvocationTargetException
         {
             try {
-                commander.saveChanges(monitor, options);
+                commander.saveChanges(monitor);
             } catch (DBException e) {
                 throw new InvocationTargetException(e);
             }

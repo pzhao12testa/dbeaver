@@ -68,7 +68,7 @@ public class MySQLCommandChangeUser extends DBECommandComposite<MySQLUser, UserP
     }
 
     @Override
-    public DBEPersistAction[] getPersistActions(Map<String, Object> options)
+    public DBEPersistAction[] getPersistActions()
     {
         List<DBEPersistAction> actions = new ArrayList<>();
         boolean newUser = !getObject().isPersisted();
@@ -76,7 +76,7 @@ public class MySQLCommandChangeUser extends DBECommandComposite<MySQLUser, UserP
             actions.add(
                 new SQLDatabasePersistAction(MySQLMessages.edit_command_change_user_action_create_new_user, "CREATE USER " + getObject().getFullName()) { //$NON-NLS-2$
                     @Override
-                    public void afterExecute(DBCSession session, Throwable error)
+                    public void handleExecute(DBCSession session, Throwable error)
                     {
                         if (error == null) {
                             getObject().setPersisted(true);

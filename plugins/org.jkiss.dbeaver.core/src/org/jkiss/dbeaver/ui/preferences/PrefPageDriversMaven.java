@@ -28,7 +28,6 @@ import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.IWorkbenchPropertyPage;
-import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.registry.maven.MavenRegistry;
 import org.jkiss.dbeaver.registry.maven.MavenRepository;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
@@ -76,7 +75,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
         Composite composite = UIUtils.createPlaceholder(parent, 1, 5);
 
         {
-            Group mavenGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_drivers_maven_group_repositories, 2, GridData.FILL_BOTH, 300);
+            Group mavenGroup = UIUtils.createControlGroup(composite, "Repositories", 2, GridData.FILL_BOTH, 300);
             mavenRepoTable = new Table(mavenGroup, SWT.BORDER | SWT.FULL_SELECTION);
             UIUtils.createTableColumn(mavenRepoTable, SWT.LEFT, "Id");
             UIUtils.createTableColumn(mavenRepoTable, SWT.LEFT, "URL");
@@ -86,11 +85,11 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
 
             Composite buttonsPH = UIUtils.createPlaceholder(mavenGroup, 1);
             buttonsPH.setLayoutData(new GridData(GridData.VERTICAL_ALIGN_BEGINNING));
-            UIUtils.createToolButton(buttonsPH, CoreMessages.pref_page_drivers_maven_button_add, new SelectionAdapter() {
+            UIUtils.createToolButton(buttonsPH, "Add", new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e)
                 {
-                    String urlString = EnterNameDialog.chooseName(getShell(), CoreMessages.pref_page_drivers_maven_label_enter_maven_repository_url, "http://");
+                    String urlString = EnterNameDialog.chooseName(getShell(), "Enter Maven repository URL", "http://");
                     if (urlString != null) {
                         try {
                             URL url = new URL(urlString);
@@ -99,12 +98,12 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
                             item.setText(new String[]{url.getHost(), urlString});
                             item.setData(repository);
                         } catch (MalformedURLException e1) {
-                            DBUserInterface.getInstance().showError(CoreMessages.pref_page_drivers_maven_label_bad_url, CoreMessages.pref_page_drivers_maven_label_bad_url_tip, e1);
+                            DBUserInterface.getInstance().showError("Bad URL", "Bad Maven repository URL", e1);
                         }
                     }
                 }
             });
-            removeButton = UIUtils.createToolButton(buttonsPH, CoreMessages.pref_page_drivers_maven_button_remove, new SelectionAdapter() {
+            removeButton = UIUtils.createToolButton(buttonsPH, "Remove", new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     mavenRepoTable.remove(mavenRepoTable.getSelectionIndices());
@@ -113,7 +112,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
             });
             removeButton.setEnabled(false);
 
-            disableButton = UIUtils.createToolButton(buttonsPH, CoreMessages.pref_page_drivers_maven_label_disable, new SelectionAdapter() {
+            disableButton = UIUtils.createToolButton(buttonsPH, "Disable", new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     for (TableItem item : mavenRepoTable.getSelection()) {
@@ -129,7 +128,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
                 }
             });
             removeButton.setEnabled(false);
-            moveUpButton = UIUtils.createToolButton(buttonsPH, CoreMessages.pref_page_drivers_maven_button_up, new SelectionAdapter() {
+            moveUpButton = UIUtils.createToolButton(buttonsPH, "Up", new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     final TableItem item = mavenRepoTable.getSelection()[0];
@@ -142,7 +141,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
                     }
                 }
             });
-            moveDownButton = UIUtils.createToolButton(buttonsPH, CoreMessages.pref_page_drivers_maven_button_down, new SelectionAdapter() {
+            moveDownButton = UIUtils.createToolButton(buttonsPH, "Down", new SelectionAdapter() {
                 @Override
                 public void widgetSelected(SelectionEvent e) {
                     final TableItem item = mavenRepoTable.getSelection()[0];
@@ -165,7 +164,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
         }
 
         {
-            Group propsGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_drivers_maven_group_properties, 2, GridData.FILL_HORIZONTAL, 0);
+            Group propsGroup = UIUtils.createControlGroup(composite, "Properties", 2, GridData.FILL_HORIZONTAL, 0);
             idText = UIUtils.createLabelText(propsGroup, "ID", "", SWT.BORDER | SWT.READ_ONLY);
             idText.addModifyListener(new ModifyListener() {
                 @Override
@@ -176,7 +175,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
                     }
                 }
             });
-            nameText = UIUtils.createLabelText(propsGroup, CoreMessages.pref_page_drivers_maven_label_name, "", SWT.BORDER);
+            nameText = UIUtils.createLabelText(propsGroup, "Name", "", SWT.BORDER);
             nameText.addModifyListener(new ModifyListener() {
                 @Override
                 public void modifyText(ModifyEvent e) {
@@ -195,7 +194,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
                     }
                 }
             });
-            scopeText = UIUtils.createLabelText(propsGroup, CoreMessages.pref_page_drivers_maven_label_scope, "", SWT.BORDER);
+            scopeText = UIUtils.createLabelText(propsGroup, "Scope", "", SWT.BORDER);
             scopeText.addModifyListener(new ModifyListener() {
                 @Override
                 public void modifyText(ModifyEvent e) {
@@ -207,8 +206,8 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
         }
 
         {
-            Group authGroup = UIUtils.createControlGroup(composite, CoreMessages.pref_page_drivers_maven_group_authentication, 4, GridData.FILL_HORIZONTAL, 0);
-            userNameText = UIUtils.createLabelText(authGroup, CoreMessages.pref_page_drivers_maven_label_user, "", SWT.BORDER);
+            Group authGroup = UIUtils.createControlGroup(composite, "Authentication", 4, GridData.FILL_HORIZONTAL, 0);
+            userNameText = UIUtils.createLabelText(authGroup, "User", "", SWT.BORDER);
             userNameText.addModifyListener(new ModifyListener() {
                 @Override
                 public void modifyText(ModifyEvent e) {
@@ -217,7 +216,7 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
                     }
                 }
             });
-            userPasswordText = UIUtils.createLabelText(authGroup, CoreMessages.pref_page_drivers_maven_label_password, "", SWT.BORDER | SWT.PASSWORD);
+            userPasswordText = UIUtils.createLabelText(authGroup, "Password", "", SWT.BORDER | SWT.PASSWORD);
             userPasswordText.addModifyListener(new ModifyListener() {
                 @Override
                 public void modifyText(ModifyEvent e) {
@@ -258,9 +257,9 @@ public class PrefPageDriversMaven extends AbstractPrefPage implements IWorkbench
         final MavenRepository repo = getSelectedRepository();
         if (repo != null) {
             if (disabledRepositories.contains(repo)) {
-                disableButton.setText(CoreMessages.pref_page_drivers_maven_label_enable);
+                disableButton.setText("Enable");
             } else {
-                disableButton.setText(CoreMessages.pref_page_drivers_maven_label_disable);
+                disableButton.setText("Disable");
             }
             disableButton.setEnabled(true);
             final boolean isEditable = repo.getType() == MavenRepository.RepositoryType.CUSTOM;

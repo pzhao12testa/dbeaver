@@ -105,8 +105,7 @@ public class DataSourceAutoCommitHandler extends AbstractDataSourceHandler imple
         // Update command image
         element.setIcon(DBeaverIcons.getImageDescriptor(autoCommit ? UIIcon.TXN_COMMIT_AUTO : UIIcon.TXN_COMMIT_MANUAL));
         String isolationName = isolation == null ? "?" : isolation.getTitle();
-        String text = autoCommit ? "Switch to manual commit (" + isolationName + ")" : "Switch to auto-commit";
-        element.setText(text);
-        element.setTooltip(text);
+        element.setText(autoCommit ? "Switch to manual commit (" + isolationName + ")" : "Switch to auto-commit");
+        element.setTooltip(autoCommit ? "Manual commit (" + isolationName + ")" : "Auto-commit");
     }
 }

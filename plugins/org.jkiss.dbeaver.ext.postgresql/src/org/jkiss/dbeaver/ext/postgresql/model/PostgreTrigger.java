@@ -36,7 +36,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * PostgreTrigger
@@ -55,7 +54,6 @@ public class PostgreTrigger implements DBSTrigger, DBPQualifiedObject, PostgreOb
 
     private PostgreTableBase table;
     private long objectId;
-    private String enabledState;
     private String whenExpression;
     private long functionSchemaId;
     private long functionId;
@@ -75,7 +73,6 @@ public class PostgreTrigger implements DBSTrigger, DBPQualifiedObject, PostgreOb
         this.name = JDBCUtils.safeGetString(dbResult, "tgname");
         this.table = table;
         this.objectId = JDBCUtils.safeGetLong(dbResult, "oid");
-        this.enabledState = JDBCUtils.safeGetString(dbResult, "tgenabled");
         this.whenExpression = JDBCUtils.safeGetString(dbResult, "tgqual");
 
         // Get procedure
@@ -115,7 +112,6 @@ public class PostgreTrigger implements DBSTrigger, DBPQualifiedObject, PostgreOb
 
     @NotNull
     @Override
-    @Property(viewable = true, order = 1)
     public String getName() {
         return name;
     }
@@ -136,11 +132,6 @@ public class PostgreTrigger implements DBSTrigger, DBPQualifiedObject, PostgreOb
         return type;
     }
 
-    @Property(viewable = true, order = 5)
-    public String getEnabledState() {
-        return enabledState;
-    }
-
     @Override
     public boolean isPersisted() {
         return persisted;
@@ -153,18 +144,18 @@ public class PostgreTrigger implements DBSTrigger, DBPQualifiedObject, PostgreOb
     }
 
     @Override
-    @Property(viewable = true, order = 10)
+    @Property(viewable = true, order = 5)
     public long getObjectId() {
         return objectId;
     }
 
-    @Property(viewable = true, order = 11)
+    @Property(viewable = true, order = 6)
     public String getWhenExpression()
     {
         return whenExpression;
     }
 
-    @Property(viewable = true, order = 12)
+    @Property(viewable = true, order = 7)
     public PostgreProcedure getFunction(DBRProgressMonitor monitor) throws DBException {
         if (functionId == 0) {
             return null;
@@ -199,7 +190,7 @@ public class PostgreTrigger implements DBSTrigger, DBPQualifiedObject, PostgreOb
 
     @Override
     @Property(hidden = true, editable = true, updatable = true, order = -1)
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException
     {
         if (body == null) {
             try (JDBCSession session = DBUtils.openMetaSession(monitor, getDataSource(), "Read trigger definition")) {

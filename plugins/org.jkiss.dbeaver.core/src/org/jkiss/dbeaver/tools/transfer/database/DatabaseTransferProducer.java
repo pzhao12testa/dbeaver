@@ -31,7 +31,6 @@ import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSDataContainer;
 import org.jkiss.dbeaver.tools.transfer.IDataTransferConsumer;
 import org.jkiss.dbeaver.tools.transfer.IDataTransferProducer;
-import org.jkiss.dbeaver.ui.controls.resultset.ResultSetDataContainer;
 
 /**
  * Data container transfer producer
@@ -69,25 +68,16 @@ public class DatabaseTransferProducer implements IDataTransferProducer<DatabaseP
         DatabaseProducerSettings settings)
         throws DBException {
         String contextTask = CoreMessages.data_transfer_wizard_job_task_export;
-
         DBPDataSource dataSource = getSourceObject().getDataSource();
         assert (dataSource != null);
-
-        boolean selectiveExportFromUI = settings.isSelectedColumnsOnly() || settings.isSelectedRowsOnly();
-        if (dataContainer instanceof ResultSetDataContainer) {
-            ((ResultSetDataContainer) dataContainer).getOptions().setExportSelectedRows(settings.isSelectedRowsOnly());
-            ((ResultSetDataContainer) dataContainer).getOptions().setExportSelectedColumns(settings.isSelectedColumnsOnly());
-        }
-
         boolean newConnection = settings.isOpenNewConnections();
-        boolean forceDataReadTransactions = Boolean.TRUE.equals(dataSource.getDataSourceFeature(FEATURE_FORCE_TRANSACTIONS));
-        DBCExecutionContext context = !selectiveExportFromUI && newConnection ?
+        DBCExecutionContext context = newConnection ?
             dataSource.openIsolatedContext(monitor, "Data transfer producer") : dataSource.getDefaultContext(false);
         try (DBCSession session = context.openSession(monitor, DBCExecutionPurpose.UTIL, contextTask)) {
             try {
                 AbstractExecutionSource transferSource = new AbstractExecutionSource(dataContainer, context, consumer);
                 session.enableLogging(false);
-                if (!selectiveExportFromUI && (newConnection || forceDataReadTransactions)) {
+                if (newConnection) {
                     // Turn off auto-commit in source DB
                     // Auto-commit has to be turned off because some drivers allows to read LOBs and
                     // other complex structures only in transactional mode
@@ -146,8 +136,9 @@ public class DatabaseTransferProducer implements IDataTransferProducer<DatabaseP
                     monitor.done();
                 }
 
+                //dataContainer.readData(context, consumer, dataFilter, -1, -1);
             } finally {
-                if (!selectiveExportFromUI && (newConnection || forceDataReadTransactions)) {
+                if (newConnection) {
                     DBCTransactionManager txnManager = DBUtils.getTransactionManager(context);
                     if (txnManager != null) {
                         try {

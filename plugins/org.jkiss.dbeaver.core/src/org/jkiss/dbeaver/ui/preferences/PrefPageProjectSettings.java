@@ -49,7 +49,6 @@ import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 import org.jkiss.utils.CommonUtils;
 import org.osgi.service.prefs.BackingStoreException;
-import org.jkiss.dbeaver.core.CoreMessages;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -78,14 +77,14 @@ public class PrefPageProjectSettings extends AbstractPrefPage implements IWorkbe
         Composite composite = UIUtils.createPlaceholder(parent, 1, 5);
 
         {
-            UIUtils.createControlLabel(composite, CoreMessages.pref_page_projects_settings_label_resource_location);
+            UIUtils.createControlLabel(composite, "Resource locations");
 
             resourceTable = new Table(composite, SWT.SINGLE | SWT.BORDER | SWT.FULL_SELECTION);
             resourceTable.setLayoutData(new GridData(GridData.FILL_BOTH));
             resourceTable.setHeaderVisible(true);
             resourceTable.setLinesVisible(true);
-            UIUtils.createTableColumn(resourceTable, SWT.LEFT, CoreMessages.pref_page_projects_settings_label_resource);
-            UIUtils.createTableColumn(resourceTable, SWT.LEFT, CoreMessages.pref_page_projects_settings_label_folder);
+            UIUtils.createTableColumn(resourceTable, SWT.LEFT, "Resource");
+            UIUtils.createTableColumn(resourceTable, SWT.LEFT, "Folder");
             resourceTable.setHeaderVisible(true);
             resourceTable.setLayoutData(new GridData(GridData.FILL_BOTH));
 
@@ -112,7 +111,7 @@ public class PrefPageProjectSettings extends AbstractPrefPage implements IWorkbe
                         final String resourcePath = item.getText(1);
                         if (project != null) {
                             final IFolder folder = project.getFolder(resourcePath);
-                            ContainerSelectionDialog dialog = new ContainerSelectionDialog(resourceTable.getShell(), folder, true, CoreMessages.pref_page_projects_settings_label_select + item.getText(0) + CoreMessages.pref_page_projects_settings_label_root_folder);
+                            ContainerSelectionDialog dialog = new ContainerSelectionDialog(resourceTable.getShell(), folder, true, "Select " + item.getText(0) + " root folder");
                             dialog.showClosedProjects(false);
                             dialog.setValidator(new ISelectionValidator() {
                                 @Override
@@ -120,11 +119,11 @@ public class PrefPageProjectSettings extends AbstractPrefPage implements IWorkbe
                                     if (selection instanceof IPath) {
                                         final File file = ((IPath) selection).toFile();
                                         if (file.isHidden() || file.getName().startsWith(".")) {
-                                            return CoreMessages.pref_page_projects_settings_label_not_use_hidden_folders;
+                                            return "Can't use hidden folders";
                                         }
                                         final String[] segments = ((IPath) selection).segments();
                                         if (!project.getName().equals(segments[0])) {
-                                            return CoreMessages.pref_page_projects_settings_label_not_store_resources_in_another_project;
+                                            return "Can't store resources in another project";
                                         }
                                     }
                                     return null;
@@ -154,7 +153,7 @@ public class PrefPageProjectSettings extends AbstractPrefPage implements IWorkbe
                 }
             });
 
-            UIUtils.createInfoLabel(composite, CoreMessages.pref_page_projects_settings_label_restart_require_refresh_global_settings);
+            UIUtils.createInfoLabel(composite, "Restart is required to refresh global settings");
         }
 
         performDefaults();

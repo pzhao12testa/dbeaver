@@ -191,11 +191,7 @@ public class JDBCCollection implements DBDCollection, DBDValueCloneable {
         if (column instanceof DBSTypedObjectEx) {
             DBSDataType arrayType = ((DBSTypedObjectEx) column).getDataType();
             if (arrayType != null) {
-                try {
-                    elementType = arrayType.getComponentType(monitor);
-                } catch (DBException e) {
-                    e.printStackTrace();
-                }
+                elementType = arrayType.getComponentType(monitor);
             }
         }
         if (elementType == null) {

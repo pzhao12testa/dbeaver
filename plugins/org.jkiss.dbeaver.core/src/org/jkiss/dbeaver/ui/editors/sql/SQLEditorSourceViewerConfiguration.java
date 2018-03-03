@@ -29,8 +29,6 @@ import org.eclipse.jface.text.information.IInformationProvider;
 import org.eclipse.jface.text.information.InformationPresenter;
 import org.eclipse.jface.text.presentation.IPresentationReconciler;
 import org.eclipse.jface.text.presentation.PresentationReconciler;
-import org.eclipse.jface.text.reconciler.IReconciler;
-import org.eclipse.jface.text.reconciler.MonoReconciler;
 import org.eclipse.jface.text.rules.BufferedRuleBasedScanner;
 import org.eclipse.jface.text.rules.DefaultDamagerRepairer;
 import org.eclipse.jface.text.rules.Token;
@@ -376,19 +374,6 @@ public class SQLEditorSourceViewerConfiguration extends TextSourceViewerConfigur
         if (hyperlinkDetector instanceof IHyperlinkDetectorExtension) {
             ((IHyperlinkDetectorExtension)hyperlinkDetector).dispose();
         }
-    }
-
-    public IReconciler getReconciler(ISourceViewer sourceViewer) {
-        if (!editor.isFoldingEnabled()) {
-            return null;
-        }
-
-        SQLReconcilingStrategy strategy = new SQLReconcilingStrategy();
-        strategy.setEditor(editor);
-
-        MonoReconciler reconciler = new MonoReconciler(strategy, true);
-
-        return reconciler;
     }
 
 }

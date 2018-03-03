@@ -28,9 +28,9 @@ import org.eclipse.ui.*;
 import org.eclipse.ui.commands.ICommandService;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.contexts.IContextService;
+import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.runtime.features.DBRFeature;
 import org.jkiss.dbeaver.model.runtime.features.DBRFeatureRegistry;
-import org.jkiss.dbeaver.ui.DBeaverUIConstants;
 import org.jkiss.dbeaver.ui.controls.resultset.ResultSetViewer;
 import org.jkiss.dbeaver.ui.editors.entity.EntityEditor;
 import org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase;
@@ -44,12 +44,11 @@ import org.jkiss.dbeaver.ui.navigator.INavigatorModelView;
  */
 class WorkbenchContextListener implements IWindowListener, IPageListener, IPartListener {
 
-    //private static final Log log = Log.getLog(WorkbenchContextListener.class);
+    private static final Log log = Log.getLog(WorkbenchContextListener.class);
 
     public static final String NAVIGATOR_CONTEXT_ID = "org.jkiss.dbeaver.ui.context.navigator";
     public static final String SQL_EDITOR_CONTEXT_ID = "org.jkiss.dbeaver.ui.editors.sql";
     public static final String RESULTS_CONTEXT_ID = "org.jkiss.dbeaver.ui.context.resultset";
-    public static final String PERSPECTIVE_CONTEXT_ID = "org.jkiss.dbeaver.ui.perspective";
 
     private IContextActivation activationNavigator;
     private IContextActivation activationSQL;
@@ -57,65 +56,23 @@ class WorkbenchContextListener implements IWindowListener, IPageListener, IPartL
     private CommandExecutionListener commandExecutionListener;
 
     public WorkbenchContextListener() {
-        IWorkbench workbench = PlatformUI.getWorkbench();
-
         // Register in already created windows and pages
-        for (IWorkbenchWindow window : workbench.getWorkbenchWindows()) {
+        for (IWorkbenchWindow window : PlatformUI.getWorkbench().getWorkbenchWindows()) {
             listenWindowEvents(window);
         }
-        workbench.addWindowListener(this);
+    }
 
-        {
-            final ICommandService commandService = workbench.getService(ICommandService.class);
+    private void listenWindowEvents(IWorkbenchWindow window) {
+        window.addPageListener(this);
+        for (IWorkbenchPage page : window.getPages()) {
+            page.addPartListener(this);
+        }
+        if (commandExecutionListener == null) {
+            final ICommandService commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
             if (commandService != null) {
                 commandExecutionListener = new CommandExecutionListener();
                 commandService.addExecutionListener(commandExecutionListener);
             }
-        }
-
-        workbench.addWindowListener(this);
-        workbench.addWorkbenchListener(new IWorkbenchListener() {
-            @Override
-            public boolean preShutdown(IWorkbench workbench, boolean forced) {
-                return true;
-            }
-
-            @Override
-            public void postShutdown(IWorkbench workbench) {
-
-            }
-        });
-    }
-
-    private void listenWindowEvents(IWorkbenchWindow window) {
-        IPerspectiveListener perspectiveListener = new IPerspectiveListener() {
-            private IContextActivation perspectiveActivation;
-
-            @Override
-            public void perspectiveActivated(IWorkbenchPage page, IPerspectiveDescriptor perspective) {
-                IContextService contextService = PlatformUI.getWorkbench().getService(IContextService.class);
-                if (contextService == null) {
-                    return;
-                }
-                if (perspective.getId().equals(DBeaverUIConstants.PERSPECTIVE_DBEAVER)) {
-                    perspectiveActivation = contextService.activateContext(PERSPECTIVE_CONTEXT_ID);
-                } else if (perspectiveActivation != null) {
-                    contextService.deactivateContext(perspectiveActivation);
-                    perspectiveActivation = null;
-                }
-            }
-
-            @Override
-            public void perspectiveChanged(IWorkbenchPage page, IPerspectiveDescriptor perspective, String changeId) {
-
-            }
-        };
-        window.addPerspectiveListener(perspectiveListener);
-        perspectiveListener.perspectiveActivated(window.getActivePage(), window.getActivePage().getPerspective());
-
-        window.addPageListener(this);
-        for (IWorkbenchPage page : window.getPages()) {
-            page.addPartListener(this);
         }
     }
 
@@ -240,12 +197,17 @@ class WorkbenchContextListener implements IWindowListener, IPageListener, IPartL
     }
 
     static void registerInWorkbench() {
-        DBeaverUI.asyncExec(new Runnable() {
+        new Job("Workbench listener") {
             @Override
-            public void run() {
-                new WorkbenchContextListener();
+            protected IStatus run(IProgressMonitor monitor) {
+                if (!PlatformUI.isWorkbenchRunning()) {
+                    schedule(50);
+                } else {
+                    PlatformUI.getWorkbench().addWindowListener(new WorkbenchContextListener());
+                }
+                return Status.OK_STATUS;
             }
-        });
+        }.schedule();
     }
 
     private static class CommandExecutionListener implements IExecutionListener {

@@ -103,12 +103,12 @@ public class DBVEntityAttribute implements DBSEntityAttribute
     }
 
     @Override
-    public Integer getScale() {
+    public int getScale() {
         return -1;
     }
 
     @Override
-    public Integer getPrecision() {
+    public int getPrecision() {
         return -1;
     }
 

@@ -19,31 +19,37 @@ package org.jkiss.dbeaver.ext.mysql.edit;
 
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.model.DBPEvaluationContext;
+import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLCatalog;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLTableBase;
 import org.jkiss.dbeaver.ext.mysql.model.MySQLView;
-import org.jkiss.dbeaver.model.DBPEvaluationContext;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
-import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.impl.DBSObjectCache;
 import org.jkiss.dbeaver.model.impl.edit.SQLDatabasePersistAction;
+import org.jkiss.dbeaver.model.impl.sql.edit.SQLObjectEditor;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * MySQLViewManager
  */
-public class MySQLViewManager extends MySQLTableManager {
+public class MySQLViewManager extends SQLObjectEditor<MySQLTableBase, MySQLCatalog> {
 
     @Nullable
     @Override
     public DBSObjectCache<MySQLCatalog, MySQLTableBase> getObjectsCache(MySQLTableBase object)
     {
         return object.getContainer().getTableCache();
+    }
+
+    @Override
+    public long getMakerOptions()
+    {
+        return FEATURE_EDITOR_ON_CREATE;
     }
 
     @Override
@@ -62,30 +68,25 @@ public class MySQLViewManager extends MySQLTableManager {
     @Override
     protected MySQLView createDatabaseObject(DBRProgressMonitor monitor, DBECommandContext context, MySQLCatalog parent, Object copyFrom)
     {
-        MySQLView newView = new MySQLView(parent);
-        try {
-            newView.setName(getNewChildName(monitor, parent, "new_view"));
-        } catch (DBException e) {
-            // Never be here
-            log.error(e);
-        }
-        return newView;
+        MySQLView newCatalog = new MySQLView(parent);
+        newCatalog.setName("NewView"); //$NON-NLS-1$
+        return newCatalog;
     }
 
     @Override
-    protected void addStructObjectCreateActions(List<DBEPersistAction> actions, StructCreateCommand command, Map<String, Object> options)
+    protected void addObjectCreateActions(List<DBEPersistAction> actions, ObjectCreateCommand command)
     {
         createOrReplaceViewQuery(actions, (MySQLView) command.getObject());
     }
 
     @Override
-    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command, Map<String, Object> options)
+    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command)
     {
         createOrReplaceViewQuery(actionList, (MySQLView) command.getObject());
     }
 
     @Override
-    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command, Map<String, Object> options)
+    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command)
     {
         actions.add(
             new SQLDatabasePersistAction("Drop view", "DROP VIEW " + command.getObject().getFullyQualifiedName(DBPEvaluationContext.DDL)) //$NON-NLS-2$
@@ -105,5 +106,26 @@ public class MySQLViewManager extends MySQLTableManager {
         actions.add(new SQLDatabasePersistAction("Create view", decl.toString()));
     }
 
+/*
+    public ITabDescriptor[] getTabDescriptors(IWorkbenchWindow workbenchWindow, final IDatabaseEditor activeEditor, final MySQLView object)
+    {
+        if (object.getContainer().isSystem()) {
+            return null;
+        }
+        return new ITabDescriptor[] {
+            new PropertyTabDescriptor(
+                PropertiesContributor.CATEGORY_INFO,
+                "view.definition", //$NON-NLS-1$
+                MySQLMessages.edit_view_manager_definition,
+                DBIcon.SOURCES.getImage(),
+                new SectionDescriptor("default", MySQLMessages.edit_view_manager_definition) { //$NON-NLS-1$
+                    public ISection getSectionClass()
+                    {
+                        return new MySQLViewDefinitionSection(activeEditor);
+                    }
+                })
+        };
+    }
+*/
 }
 

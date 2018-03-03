@@ -36,7 +36,7 @@ public class PostgreHStoreValueHandler extends JDBCStringValueHandler {
 
     @Override
     protected Object fetchColumnValue(DBCSession session, JDBCResultSet resultSet, DBSTypedObject type, int index) throws SQLException {
-        return resultSet.getString(index);
+        return super.fetchColumnValue(session, resultSet, type, index);
     }
 
     @Override

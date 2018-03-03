@@ -112,7 +112,7 @@ public class DBECommandProperty<OBJECT_TYPE extends DBPObject> extends DBEComman
     }
 
     @Override
-    public DBEPersistAction[] getPersistActions(Map<String, Object> options)
+    public DBEPersistAction[] getPersistActions()
     {
         if (handler instanceof DBEPropertyPersister) {
             return ((DBEPropertyPersister<OBJECT_TYPE>)handler).getPersistActions(getObject(), newValue);

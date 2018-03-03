@@ -35,7 +35,6 @@ import org.jkiss.dbeaver.model.sql.SQLUtils;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Postgre table manager
@@ -71,7 +70,7 @@ public class PostgreTableManager extends SQLTableManager<PostgreTableBase, Postg
     }
 
     @Override
-    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command, Map<String, Object> options)
+    protected void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command)
     {
         final PostgreTableBase table = command.getObject();
         if (command.getProperties().size() > 1 || command.getProperty("description") == null) {
@@ -84,7 +83,7 @@ public class PostgreTableManager extends SQLTableManager<PostgreTableBase, Postg
     }
 
     @Override
-    protected void addObjectExtraActions(List<DBEPersistAction> actions, NestedObjectCommand<PostgreTableBase, PropertyHandler> command, Map<String, Object> options) {
+    protected void addObjectExtraActions(List<DBEPersistAction> actions, NestedObjectCommand<PostgreTableBase, PropertyHandler> command) {
         // Add comments
         if (command.getProperty("description") != null) {
             actions.add(new SQLDatabasePersistAction(
@@ -93,7 +92,7 @@ public class PostgreTableManager extends SQLTableManager<PostgreTableBase, Postg
                     " IS " + SQLUtils.quoteString(command.getObject(), command.getObject().getDescription())));
         }
         for (PostgreTableColumn column : command.getObject().getCachedAttributes()) {
-            if (!CommonUtils.isEmpty(column.getDescription())) {
+            if (!column.isPersisted() && !CommonUtils.isEmpty(column.getDescription())) {
                 actions.add(new SQLDatabasePersistAction("Set column comment", "COMMENT ON COLUMN " +
                     DBUtils.getObjectFullName(command.getObject(), DBPEvaluationContext.DDL) + "." + DBUtils.getQuotedIdentifier(column) +
                     " IS " + SQLUtils.quoteString(column, column.getDescription())));
@@ -117,17 +116,7 @@ public class PostgreTableManager extends SQLTableManager<PostgreTableBase, Postg
                     }
                     ddl.append(")");
                 }
-                ddl.append("\nWITH (\n\tOIDS=").append(table.isHasOids() ? "TRUE" : "FALSE");
-                ddl.append("\n)");
-                boolean hasOtherSpecs = false;
-                PostgreTablespace tablespace = table.getTablespace(monitor);
-                if (tablespace != null && table.isTablespaceSpecified()) {
-                    ddl.append("\nTABLESPACE ").append(tablespace.getName());
-                    hasOtherSpecs = true;
-                }
-                if (hasOtherSpecs) {
-                    ddl.append("\n");
-                }
+                ddl.append("\nWITH (\n\tOIDS=").append(table.isHasOids() ? "TRUE" : "FALSE").append("\n)");
             } catch (DBException e) {
                 log.error(e);
             }
@@ -135,7 +124,7 @@ public class PostgreTableManager extends SQLTableManager<PostgreTableBase, Postg
     }
 
     @Override
-    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command, Map<String, Object> options)
+    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command)
     {
         actions.add(
             new SQLDatabasePersistAction(
@@ -159,15 +148,13 @@ public class PostgreTableManager extends SQLTableManager<PostgreTableBase, Postg
     }
 
     @Override
-    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command, Map<String, Object> options)
+    protected void addObjectDeleteActions(List<DBEPersistAction> actions, ObjectDeleteCommand command)
     {
         actions.add(
             new SQLDatabasePersistAction(
                 ModelMessages.model_jdbc_drop_table,
-                "DROP " + (command.getObject() instanceof PostgreTableForeign ? "FOREIGN TABLE" : "TABLE") +  //$NON-NLS-2$
-                    " " + command.getObject().getFullyQualifiedName(DBPEvaluationContext.DDL) +  //$NON-NLS-2$
-                    (CommonUtils.getOption(options, OPTION_DELETE_CASCADE) ? " CASCADE" : "")
-            )
+                "DROP " + (command.getObject() instanceof PostgreTableForeign ? "FOREIGN TABLE" : "TABLE") +
+                    " " + command.getObject().getFullyQualifiedName(DBPEvaluationContext.DDL)) //$NON-NLS-2$
         );
     }
 

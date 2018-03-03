@@ -24,7 +24,6 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.menus.UIElement;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.model.navigator.DBNContainer;
-import org.jkiss.dbeaver.model.navigator.DBNDataSource;
 import org.jkiss.dbeaver.model.navigator.DBNNode;
 import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 
@@ -54,7 +53,7 @@ public class NavigatorHandlerObjectCreateNew extends NavigatorHandlerObjectCreat
     public static String getObjectTypeName(UIElement element) {
         DBNNode node = NavigatorUtils.getSelectedNode(element);
         if (node != null) {
-            if (node instanceof DBNContainer && !(node instanceof DBNDataSource)) {
+            if (node instanceof DBNContainer) {
                 return ((DBNContainer)node).getChildrenType();
             } else {
                 return node.getNodeType();

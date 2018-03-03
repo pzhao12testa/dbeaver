@@ -32,7 +32,6 @@ import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author Karl
@@ -94,8 +93,8 @@ public class ExasolTableManager extends SQLTableManager<ExasolTable, ExasolSchem
     }
 
     @Override
-    public void addStructObjectCreateActions(List<DBEPersistAction> actions, StructCreateCommand command, Map<String, Object> options) {
-        super.addStructObjectCreateActions(actions, command, options);
+    public void addStructObjectCreateActions(List<DBEPersistAction> actions, StructCreateCommand command) {
+        super.addStructObjectCreateActions(actions, command);
         // Eventually add Comment
         DBEPersistAction commentAction = buildCommentAction(command.getObject());
         if (commentAction != null) {
@@ -108,7 +107,7 @@ public class ExasolTableManager extends SQLTableManager<ExasolTable, ExasolSchem
     // ------
 
     @Override
-    public void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command, Map<String, Object> options) {
+    public void addObjectModifyActions(List<DBEPersistAction> actionList, ObjectChangeCommand command) {
         ExasolTable exasolTable = command.getObject();
 
         if (command.getProperties().size() > 1) {
@@ -132,7 +131,7 @@ public class ExasolTableManager extends SQLTableManager<ExasolTable, ExasolSchem
     // Rename
     // ------
     @Override
-    public void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command, Map<String, Object> options) {
+    public void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command) {
         String sql = String.format(SQL_RENAME_TABLE, command.getObject().getFullyQualifiedName(DBPEvaluationContext.DDL), command.getNewName());
         actions.add(
             new SQLDatabasePersistAction(CMD_RENAME, sql)

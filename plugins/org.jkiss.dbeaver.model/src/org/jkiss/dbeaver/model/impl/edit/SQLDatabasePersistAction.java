@@ -71,12 +71,7 @@ public class SQLDatabasePersistAction implements DBEPersistAction {
     }
 
     @Override
-    public void beforeExecute(DBCSession session) throws DBCException {
-        // do nothing
-    }
-
-    @Override
-    public void afterExecute(DBCSession session, Throwable error)
+    public void handleExecute(DBCSession session, Throwable error)
         throws DBCException
     {
         // do nothing

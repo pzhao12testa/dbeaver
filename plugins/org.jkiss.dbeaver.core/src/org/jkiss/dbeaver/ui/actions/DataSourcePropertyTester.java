@@ -140,54 +140,30 @@ public class DataSourcePropertyTester extends PropertyTester
         @Override
         public synchronized void handleTransactionAutocommit(@NotNull DBCExecutionContext context, boolean autoCommit)
         {
-            updateUI(new Runnable() {
-                @Override
-                public void run() {
-                    // Fire transactional mode change
-                    DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTIONAL);
-                    DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
-                    DataSourcePropertyTester.fireCommandRefresh(CoreCommands.CMD_TOGGLE_AUTOCOMMIT);
-                }
-            });
+            // Fire transactional mode change
+            DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTIONAL);
+            DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
+            DataSourcePropertyTester.fireCommandRefresh(CoreCommands.CMD_TOGGLE_AUTOCOMMIT);
         }
 
         @Override
         public synchronized void handleTransactionCommit(@NotNull DBCExecutionContext context)
         {
-            updateUI(new Runnable() {
-                @Override
-                public void run() {
-                    DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
-                    updateEditorsDirtyFlag();
-                }
-            });
+            DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
+            updateEditorsDirtyFlag();
         }
 
         @Override
         public synchronized void handleTransactionRollback(@NotNull DBCExecutionContext context, DBCSavepoint savepoint)
         {
-            updateUI(new Runnable() {
-                @Override
-                public void run() {
-                    DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
-                    updateEditorsDirtyFlag();
-                }
-            });
+            DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
+            updateEditorsDirtyFlag();
         }
 
         @Override
         public synchronized void handleStatementExecuteBegin(@NotNull DBCStatement statement)
         {
-            updateUI(new Runnable() {
-                @Override
-                public void run() {
-                    DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
-                }
-            });
-        }
-
-        private void updateUI(Runnable runnable) {
-            DBeaverUI.asyncExec(runnable);
+            DataSourcePropertyTester.firePropertyChange(DataSourcePropertyTester.PROP_TRANSACTION_ACTIVE);
         }
     }
 

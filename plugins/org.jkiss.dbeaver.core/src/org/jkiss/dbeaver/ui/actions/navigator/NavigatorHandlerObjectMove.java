@@ -24,7 +24,6 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.core.CoreCommands;
 import org.jkiss.dbeaver.model.DBPOrderedObject;
-import org.jkiss.dbeaver.model.DBPScriptObject;
 import org.jkiss.dbeaver.model.edit.DBEObjectReorderer;
 import org.jkiss.dbeaver.model.navigator.DBNContainer;
 import org.jkiss.dbeaver.model.navigator.DBNDatabaseNode;
@@ -38,7 +37,6 @@ import org.jkiss.dbeaver.ui.navigator.NavigatorUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class NavigatorHandlerObjectMove extends NavigatorHandlerObjectBase {
 
@@ -105,12 +103,11 @@ public class NavigatorHandlerObjectMove extends NavigatorHandlerObjectBase {
             }
 
             if (object.isPersisted() && commandTarget.getEditor() == null) {
-                Map<String, Object> options = DBPScriptObject.EMPTY_OPTIONS;
-                if (!showScript(HandlerUtil.getActiveWorkbenchWindow(event), commandTarget.getContext(), options, "Reorder script")) {
+                if (!showScript(HandlerUtil.getActiveWorkbenchWindow(event), commandTarget.getContext(), "Reorder script")) {
                     commandTarget.getContext().resetChanges();
                     return false;
                 } else {
-                    ObjectSaver orderer = new ObjectSaver(commandTarget.getContext(), options);
+                    ObjectSaver orderer = new ObjectSaver(commandTarget.getContext());
                     TasksJob.runTask("Change object '" + object.getName() + "' position", orderer);
                 }
             }

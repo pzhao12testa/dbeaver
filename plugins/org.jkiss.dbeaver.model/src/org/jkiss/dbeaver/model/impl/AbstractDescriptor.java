@@ -75,12 +75,7 @@ public abstract class AbstractDescriptor {
 
         public ObjectType(IConfigurationElement cfg)
         {
-            this(cfg, ATTR_NAME);
-        }
-
-        public ObjectType(IConfigurationElement cfg, String typeAttr)
-        {
-            this.implName = cfg.getAttribute(typeAttr);
+            this.implName = cfg.getAttribute(ATTR_NAME);
             String condition = cfg.getAttribute(ATTR_IF);
             if (!CommonUtils.isEmpty(condition)) {
                 try {

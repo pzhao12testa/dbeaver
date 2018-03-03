@@ -28,7 +28,6 @@ import org.jkiss.dbeaver.model.edit.DBEPersistAction;
 import org.jkiss.dbeaver.model.impl.edit.SQLDatabasePersistAction;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * SQLite table manager
@@ -36,7 +35,7 @@ import java.util.Map;
 public class SQLiteTableManager extends GenericTableManager implements DBEObjectRenamer<GenericTable> {
 
     @Override
-    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command, Map<String, Object> options)
+    protected void addObjectRenameActions(List<DBEPersistAction> actions, ObjectRenameCommand command)
     {
         final GenericDataSource dataSource = command.getObject().getDataSource();
         actions.add(

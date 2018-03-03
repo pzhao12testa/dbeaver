@@ -17,8 +17,6 @@
 
 package org.jkiss.dbeaver.model;
 
-import org.jkiss.utils.CommonUtils;
-
 import java.util.Locale;
 
 /**
@@ -46,10 +44,6 @@ public enum DBPIdentifierCase {
             return value;
         }
     };
-
-    public static String capitalizeCaseName(String name) {
-        return CommonUtils.capitalizeWord(name.toLowerCase(Locale.ENGLISH));
-    }
 
     public abstract String transform(String value);
 

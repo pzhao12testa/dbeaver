@@ -16,7 +16,6 @@
  */
 package org.jkiss.dbeaver.ui.dialogs.data;
 
-import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
@@ -45,11 +44,9 @@ import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
 import org.jkiss.dbeaver.ui.DBeaverIcons;
 import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.data.IValueController;
-import org.jkiss.dbeaver.ui.data.IValueEditorStandalone;
 import org.jkiss.dbeaver.ui.data.editors.ReferenceValueEditor;
 import org.jkiss.dbeaver.ui.editors.binary.BinaryContent;
 import org.jkiss.dbeaver.ui.editors.binary.HexEditControl;
-import org.jkiss.dbeaver.ui.editors.content.ContentEditor;
 import org.jkiss.dbeaver.utils.ContentUtils;
 import org.jkiss.dbeaver.utils.GeneralUtils;
 
@@ -334,22 +331,4 @@ public class TextViewDialog extends ValueViewDialog {
         this.dirty = dirty;
     }
 
-    @Override
-    protected void createButtonsForButtonBar(Composite parent) {
-        super.createButtonsForButtonBar(parent);
-        if (getValueController().getValueType().getDataKind() == DBPDataKind.STRING) {
-            Button button = createButton(parent, IDialogConstants.PROCEED_ID, CoreMessages.dialog_text_view_open_editor, false);
-            button.setToolTipText(CoreMessages.dialog_text_view_open_editor_tip);
-        }
-    }
-
-    @Override
-    protected void buttonPressed(int buttonId) {
-        if (buttonId == IDialogConstants.PROCEED_ID) {
-            ContentEditor editor = ContentEditor.openEditor(getValueController());
-            cancelPressed();
-            return;
-        }
-        super.buttonPressed(buttonId);
-    }
 }

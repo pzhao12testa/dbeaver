@@ -18,7 +18,6 @@
 package org.jkiss.dbeaver.ui.dialogs.data;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -31,24 +30,19 @@ import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.core.DBeaverUI;
 import org.jkiss.dbeaver.model.DBPDataSource;
-import org.jkiss.dbeaver.model.DBPEvaluationContext;
-import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.data.DBDCursor;
 import org.jkiss.dbeaver.model.data.DBDDataFilter;
 import org.jkiss.dbeaver.model.data.DBDDataReceiver;
 import org.jkiss.dbeaver.model.exec.*;
-import org.jkiss.dbeaver.model.navigator.DBNDatabaseNode;
 import org.jkiss.dbeaver.model.preferences.DBPPreferenceStore;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSDataContainer;
 import org.jkiss.dbeaver.model.struct.DBSObject;
-import org.jkiss.dbeaver.ui.UIUtils;
 import org.jkiss.dbeaver.ui.controls.resultset.IResultSetContainer;
 import org.jkiss.dbeaver.ui.controls.resultset.IResultSetController;
 import org.jkiss.dbeaver.ui.controls.resultset.ResultSetViewer;
 import org.jkiss.dbeaver.ui.data.IValueController;
 import org.jkiss.dbeaver.ui.dialogs.ConfirmationDialog;
-import org.jkiss.dbeaver.ui.editors.data.AbstractDataEditor;
 
 /**
  * CursorViewDialog
@@ -119,7 +113,7 @@ public class CursorViewDialog extends ValueViewDialog implements IResultSetConta
     @Override
     public Control getControl()
     {
-        return resultSetViewer == null ? null : resultSetViewer.getControl();
+        return resultSetViewer.getControl();
     }
 
     @Override
@@ -140,7 +134,7 @@ public class CursorViewDialog extends ValueViewDialog implements IResultSetConta
 
     @Override
     public DBCExecutionContext getExecutionContext() {
-        return getValueController().getExecutionContext();
+        return resultSetViewer.getContainer().getExecutionContext();
     }
 
     @Nullable
@@ -161,17 +155,6 @@ public class CursorViewDialog extends ValueViewDialog implements IResultSetConta
     public boolean isReadyToRun()
     {
         return true;
-    }
-
-    @Override
-    public void openNewContainer(DBRProgressMonitor monitor, DBSDataContainer dataContainer, DBDDataFilter newFilter) {
-        final DBNDatabaseNode targetNode = getExecutionContext().getDataSource().getContainer().getPlatform().getNavigatorModel().getNodeByObject(monitor, dataContainer, false);
-        if (targetNode == null) {
-            UIUtils.showMessageBox(null, "Open link", "Can't navigate to '" + DBUtils.getObjectFullName(dataContainer, DBPEvaluationContext.UI) + "' - navigator node not found", SWT.ICON_ERROR);
-            return;
-        }
-        AbstractDataEditor.openNewDataEditor(targetNode, newFilter);
-
     }
 
     private class CursorDataContainer implements DBSDataContainer {

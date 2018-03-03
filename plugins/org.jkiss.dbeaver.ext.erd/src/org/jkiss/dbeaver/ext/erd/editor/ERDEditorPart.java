@@ -20,10 +20,10 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.draw2d.IFigure;
-import org.eclipse.draw2d.PrintFigureOperation;
+import org.eclipse.draw2d.*;
 import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.Insets;
+import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.*;
 import org.eclipse.gef.commands.CommandStack;
 import org.eclipse.gef.editparts.ScalableFreeformRootEditPart;
@@ -42,8 +42,14 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.printing.PrintDialog;
 import org.eclipse.swt.printing.Printer;
 import org.eclipse.swt.printing.PrinterData;
@@ -57,11 +63,10 @@ import org.eclipse.ui.model.WorkbenchAdapter;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.eclipse.ui.views.properties.IPropertySheetPage;
 import org.eclipse.ui.views.properties.PropertySheetPage;
-import org.jkiss.dbeaver.DBException;
+import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.core.DBeaverCore;
 import org.jkiss.dbeaver.ext.erd.ERDActivator;
 import org.jkiss.dbeaver.ext.erd.ERDConstants;
-import org.jkiss.dbeaver.ext.erd.ERDMessages;
 import org.jkiss.dbeaver.ext.erd.action.DiagramLayoutAction;
 import org.jkiss.dbeaver.ext.erd.action.DiagramRefreshAction;
 import org.jkiss.dbeaver.ext.erd.action.DiagramToggleGridAction;
@@ -69,10 +74,6 @@ import org.jkiss.dbeaver.ext.erd.action.ERDEditorPropertyTester;
 import org.jkiss.dbeaver.ext.erd.directedit.StatusLineValidationMessageHandler;
 import org.jkiss.dbeaver.ext.erd.dnd.DataEditDropTargetListener;
 import org.jkiss.dbeaver.ext.erd.dnd.NodeDropTargetListener;
-import org.jkiss.dbeaver.ext.erd.editor.tools.ChangeZOrderAction;
-import org.jkiss.dbeaver.ext.erd.editor.tools.SetPartColorAction;
-import org.jkiss.dbeaver.ext.erd.export.ERDExportFormatHandler;
-import org.jkiss.dbeaver.ext.erd.export.ERDExportFormatRegistry;
 import org.jkiss.dbeaver.ext.erd.model.ERDNote;
 import org.jkiss.dbeaver.ext.erd.model.EntityDiagram;
 import org.jkiss.dbeaver.ext.erd.part.DiagramPart;
@@ -86,7 +87,7 @@ import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
 import org.jkiss.utils.ArrayUtils;
 import org.jkiss.utils.CommonUtils;
 
-import java.io.File;
+import java.io.FileOutputStream;
 import java.util.*;
 
 /**
@@ -96,6 +97,8 @@ import java.util.*;
 public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
     implements DBPDataSourceUser, ISearchContextProvider, IRefreshablePart
 {
+    private static final Log log = Log.getLog(ERDEditorPart.class);
+
     protected ProgressControl progressControl;
 
     /**
@@ -425,19 +428,23 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         addAction(zoomIn);
         addAction(zoomOut);
 
-        graphicalViewer.addSelectionChangedListener(event -> {
-            String status;
-            IStructuredSelection selection = (IStructuredSelection)event.getSelection();
-            if (selection.isEmpty()) {
-                status = "";
-            } else if (selection.size() == 1) {
-                status = CommonUtils.toString(selection.getFirstElement());
-            } else {
-                status = String.valueOf(selection.size()) + " objects";
-            }
-            progressControl.setInfo(status);
+        graphicalViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+            @Override
+            public void selectionChanged(SelectionChangedEvent event)
+            {
+                String status;
+                IStructuredSelection selection = (IStructuredSelection)event.getSelection();
+                if (selection.isEmpty()) {
+                    status = "";
+                } else if (selection.size() == 1) {
+                    status = CommonUtils.toString(selection.getFirstElement());
+                } else {
+                    status = String.valueOf(selection.size()) + " objects";
+                }
+                progressControl.setInfo(status);
 
-            updateActions(editPartActionIDs);
+                updateActions(editPartActionIDs);
+            }
         });
     }
 
@@ -601,13 +608,13 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
 
             CombinedTemplateCreationEntry tableEntry = new CombinedTemplateCreationEntry("New Table", "Create a new table",
                 ERDEntity.class, new DataElementFactory(ERDEntity.class),
-                ERDActivator.getImageDescriptor("icons/table.png"),
-                ERDActivator.getImageDescriptor("icons/table.png"));
+                ERDActivator.getImageDescriptor("icons/table.gif"),
+                ERDActivator.getImageDescriptor("icons/table.gif"));
 
             CombinedTemplateCreationEntry columnEntry = new CombinedTemplateCreationEntry("New Column", "Add a new column",
                 ERDEntityAttribute.class, new DataElementFactory(ERDEntityAttribute.class),
-                ERDActivator.getImageDescriptor("icons/column.png"),
-                ERDActivator.getImageDescriptor("icons/column.png"));
+                ERDActivator.getImageDescriptor("icons/column.gif"),
+                ERDActivator.getImageDescriptor("icons/column.gif"));
 
             entries.add(tableEntry);
             entries.add(columnEntry);
@@ -632,72 +639,92 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         return isLoaded;
     }
 
-    public void refreshDiagram(boolean force, boolean refreshMetadata)
+    public void refreshDiagram(boolean force)
     {
         if (isLoaded && force) {
-            loadDiagram(refreshMetadata);
+            loadDiagram(true);
         }
     }
 
     @Override
     public void refreshPart(Object source, boolean force)
     {
-        refreshDiagram(force, true);
+        refreshDiagram(false);
     }
 
     public void saveDiagramAs()
     {
-        List<ERDExportFormatRegistry.FormatDescriptor> allFormats = ERDExportFormatRegistry.getInstance().getFormats();
-        String[] extensions = new String[allFormats.size()];
-        String[] filterNames = new String[allFormats.size()];
-        for (int i = 0; i < allFormats.size(); i++) {
-            extensions[i] = "*." + allFormats.get(i).getExtension();
-            filterNames[i] = allFormats.get(i).getLabel() + " (" + extensions[i] + ")";
-        }
         final Shell shell = getSite().getShell();
         FileDialog saveDialog = new FileDialog(shell, SWT.SAVE);
-        saveDialog.setFilterExtensions(extensions);
-        saveDialog.setFilterNames(filterNames);
+        saveDialog.setFilterExtensions(new String[]{"*.png", "*.gif", "*.bmp", "*.graphml"});
+        saveDialog.setFilterNames(new String[]{
+            "PNG format (*.png)",
+            "GIF format (*.gif)",
+//            "JPEG format (*.jpg)",
+            "Bitmap format (*.bmp)",
+            "GraphML (*.graphml)"
+        });
 
         String filePath = DialogUtils.openFileDialog(saveDialog);
         if (filePath == null || filePath.trim().length() == 0) {
             return;
         }
 
-        File outFile = new File(filePath);
-        if (outFile.exists()) {
-            if (!UIUtils.confirmAction(shell, "Overwrite file", "File '" + filePath + "' already exists.\nOverwrite?")) {
-                return;
-            }
-        }
-
-        int divPos = filePath.lastIndexOf('.');
-        if (divPos == -1) {
-            DBUserInterface.getInstance().showError("ERD export", "No file extension was specified");
-            return;
-        }
-        String ext = filePath.substring(divPos + 1);
-        ERDExportFormatRegistry.FormatDescriptor targetFormat = null;
-        for (ERDExportFormatRegistry.FormatDescriptor format : allFormats) {
-            if (format.getExtension().equals(ext)) {
-                targetFormat = format;
-                break;
-            }
-        }
-        if (targetFormat == null) {
-            DBUserInterface.getInstance().showError("ERD export", "No export format correspond to file extension '" + ext + "'");
+        int imageType = SWT.IMAGE_BMP;
+        if (filePath.toLowerCase().endsWith(".jpg")) {
+            imageType = SWT.IMAGE_JPEG;
+        } else if (filePath.toLowerCase().endsWith(".png")) {
+            imageType = SWT.IMAGE_PNG;
+        } else if (filePath.toLowerCase().endsWith(".gif")) {
+            imageType = SWT.IMAGE_GIF;
+        } else if (filePath.toLowerCase().endsWith(".graphml")) {
+            new ERDExportGraphML(getDiagram(), getDiagramPart()).exportDiagramToGraphML(filePath);
             return;
         }
 
+        IFigure figure = rootPart.getLayer(ScalableFreeformRootEditPart.PRINTABLE_LAYERS);
+        Rectangle contentBounds = figure instanceof FreeformLayeredPane ? ((FreeformLayeredPane) figure).getFreeformExtent() : figure.getBounds();
         try {
-            ERDExportFormatHandler formatHandler = targetFormat.getInstance();
+            try (FileOutputStream fos = new FileOutputStream(filePath)) {
+                Rectangle r = figure.getBounds();
+                GC gc = null;
+                Graphics g = null;
+                try {
+                    Image image = new Image(null, contentBounds.x * 2 + contentBounds.width, contentBounds.y * 2 + contentBounds.height);
+                    try {
+                        gc = new GC(image);
+                        gc.setClipping(contentBounds.x, contentBounds.y, contentBounds.width, contentBounds.height);
+                        g = new SWTGraphics(gc);
+                        g.translate(r.x * -1, r.y * -1);
+                        figure.paint(g);
+                        ImageLoader imageLoader = new ImageLoader();
+                        imageLoader.data = new ImageData[1];
+                        if (imageType != SWT.IMAGE_JPEG) {
+                            // Convert to 8bit color
+                            imageLoader.data[0] = ImageUtils.makeWebImageData(image);
+                        } else {
+                            // Use maximum colors for JPEG
+                            imageLoader.data[0] = image.getImageData();
+                        }
+                        imageLoader.save(fos, imageType);
+                    } finally {
+                        UIUtils.dispose(image);
+                    }
+                } finally {
+                    if (g != null) {
+                        g.dispose();
+                    }
+                    UIUtils.dispose(gc);
+                }
 
-            IFigure figure = rootPart.getLayer(ScalableFreeformRootEditPart.PRINTABLE_LAYERS);
-
-            formatHandler.exportDiagram(getDiagram(), figure, getDiagramPart(), outFile);
-        } catch (DBException e) {
-            DBUserInterface.getInstance().showError("ERD export failed", null, e);
+                fos.flush();
+            }
+            UIUtils.launchProgram(filePath);
+            //UIUtils.showMessageBox(shell, "Save ERD", "Diagram has been exported to " + filePath, SWT.ICON_INFORMATION);
+        } catch (Exception e) {
+            DBUserInterface.getInstance().showError("Save ERD as image", null, e);
         }
+
     }
 
     public void fillAttributeVisibilityMenu(IMenuManager menu)
@@ -706,7 +733,6 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         asMenu.add(new ChangeAttributePresentationAction(ERDAttributeStyle.ICONS));
         asMenu.add(new ChangeAttributePresentationAction(ERDAttributeStyle.TYPES));
         asMenu.add(new ChangeAttributePresentationAction(ERDAttributeStyle.NULLABILITY));
-        asMenu.add(new ChangeAttributePresentationAction(ERDAttributeStyle.COMMENTS));
         menu.add(asMenu);
 
         MenuManager avMenu = new MenuManager("Show Attributes");
@@ -715,26 +741,6 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         avMenu.add(new ChangeAttributeVisibilityAction(ERDAttributeVisibility.PRIMARY));
         avMenu.add(new ChangeAttributeVisibilityAction(ERDAttributeVisibility.NONE));
         menu.add(avMenu);
-    }
-
-    public void fillPartContextMenu(IMenuManager menu, IStructuredSelection selection) {
-        if (selection.isEmpty()) {
-            return;
-        }
-        menu.add(new ChangeZOrderAction(this, selection, true));
-        menu.add(new ChangeZOrderAction(this, selection, false));
-        menu.add(new SetPartColorAction(this, selection));
-
-/*
-        Set<IAction> actionSet = new HashSet<>();
-        for (Object actionId : getSelectionActions()) {
-            IAction action = getActionRegistry().getAction(actionId);
-            if (!actionSet.contains(action)) {
-                menu.add(action);
-                actionSet.add(action);
-            }
-        }
-*/
     }
 
     public void printDiagram()
@@ -804,7 +810,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         public void run()
         {
             getDiagram().setAttributeStyle(style, !isChecked());
-            refreshDiagram(true, false);
+            refreshDiagram(true);
         }
     }
 
@@ -827,7 +833,7 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
         public void run()
         {
             getDiagram().setAttributeVisibility(visibility);
-            refreshDiagram(true, false);
+            refreshDiagram(true);
         }
     }
 
@@ -943,16 +949,16 @@ public abstract class ERDEditorPart extends GraphicalEditorWithFlyoutPalette
                 toolBarManager.add(ActionUtils.makeCommandContribution(
                         getSite(),
                         IWorkbenchCommandConstants.FILE_SAVE_AS,
-                        ERDMessages.erd_editor_control_action_save_external_format,
+                        "Save diagram in external format",
                         UIIcon.PICTURE_SAVE));
                 toolBarManager.add(ActionUtils.makeCommandContribution(
                         getSite(),
                         IWorkbenchCommandConstants.FILE_PRINT,
-                        ERDMessages.erd_editor_control_action_print_diagram,
+                        "Print Diagram",
                         UIIcon.PRINT));
             }
             {
-                Action configAction = new Action(ERDMessages.erd_editor_control_action_configuration) {
+                Action configAction = new Action("Configuration") {
                     @Override
                     public void run()
                     {

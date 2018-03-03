@@ -1,6 +1,7 @@
 /*
  * DBeaver - Universal Database Manager
  * Copyright (C) 2010-2017 Serge Rider (serge@jkiss.org)
+ * Copyright (C) 2011-2012 Eugene Fradkin (eugene.fradkin@gmail.com)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +22,6 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.jkiss.dbeaver.DBException;
-import org.jkiss.dbeaver.ext.postgresql.PostgreMessages;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreDatabase;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreObject;
 import org.jkiss.dbeaver.ext.postgresql.model.PostgreTableBase;
@@ -58,12 +58,12 @@ public class PostgreToolAnalyze implements IExternalTool
 
         public SQLDialog(IWorkbenchPartSite partSite, List<PostgreTableBase> selectedTables)
         {
-            super(partSite, PostgreMessages.tool_analyze_title_table, selectedTables);
+            super(partSite, "Analyse table(s)", selectedTables);
         }
 
         public SQLDialog(IWorkbenchPartSite partSite, PostgreDatabase database)
         {
-            super(partSite, PostgreMessages.tool_analyze_title_database, database);
+            super(partSite, "Analyse database", database);
         }
 
         @Override

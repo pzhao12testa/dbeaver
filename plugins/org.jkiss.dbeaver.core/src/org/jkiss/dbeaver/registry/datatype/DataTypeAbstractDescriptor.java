@@ -127,18 +127,14 @@ public abstract class DataTypeAbstractDescriptor<DESCRIPTOR> extends AbstractDes
     public DESCRIPTOR getInstance()
     {
         if (instance == null && implType != null) {
-            this.instance = createInstance();
+            try {
+                this.instance = implType.createInstance(instanceType);
+            }
+            catch (Exception e) {
+                throw new IllegalStateException("Can't instantiate data type provider '" + this.id + "'", e); //$NON-NLS-1$
+            }
         }
         return instance;
-    }
-
-    protected DESCRIPTOR createInstance() {
-        try {
-            return implType.createInstance(instanceType);
-        }
-        catch (Exception e) {
-            throw new IllegalStateException("Can't instantiate data type provider '" + this.id + "'", e); //$NON-NLS-1$
-        }
     }
 
     public boolean supportsType(@NotNull DBSTypedObject typedObject) {
@@ -164,9 +160,9 @@ public abstract class DataTypeAbstractDescriptor<DESCRIPTOR> extends AbstractDes
         return supportedDataSources.isEmpty();
     }
 
-    public boolean supportsDataSource(DBPDataSource dataSource)
+    public boolean supportsDataSource(DBPDataSource dataSource, DataSourceProviderDescriptor descriptor)
     {
-        return supportedDataSources.contains(dataSource.getContainer().getDriver().getProviderId()) || supportedDataSources.contains(dataSource.getClass().getName());
+        return supportedDataSources.contains(descriptor.getId()) || supportedDataSources.contains(dataSource.getClass().getName());
     }
 
     @Override

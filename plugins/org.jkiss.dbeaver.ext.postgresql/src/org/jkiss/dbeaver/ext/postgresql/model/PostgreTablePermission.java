@@ -19,7 +19,6 @@ package org.jkiss.dbeaver.ext.postgresql.model;
 import org.jkiss.code.NotNull;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
-import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.meta.Property;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 
@@ -42,7 +41,7 @@ public class PostgreTablePermission extends PostgrePermission {
     @Property(viewable = true, order = 1)
     @NotNull
     public String getName() {
-        return DBUtils.getQuotedIdentifier(getDataSource(), grantee);
+        return grantee;
     }
 
     @Override

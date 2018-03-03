@@ -30,25 +30,14 @@ import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Listener;
-import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBeaverPreferences;
 import org.jkiss.dbeaver.core.DBeaverUI;
 import org.jkiss.dbeaver.model.data.DBDAttributeBinding;
-import org.jkiss.dbeaver.ui.controls.lightgrid.GridCell;
-import org.jkiss.dbeaver.ui.controls.lightgrid.GridPos;
-import org.jkiss.dbeaver.ui.controls.lightgrid.IGridContentProvider;
-import org.jkiss.dbeaver.ui.controls.lightgrid.IGridController;
-import org.jkiss.dbeaver.ui.controls.lightgrid.IGridLabelProvider;
-import org.jkiss.dbeaver.ui.controls.lightgrid.LightGrid;
-import org.jkiss.dbeaver.ui.controls.resultset.AbstractPresentation;
+import org.jkiss.dbeaver.ui.controls.lightgrid.*;
 
 /**
  * ResultSetControl
@@ -117,7 +106,6 @@ public class Spreadsheet extends LightGrid implements Listener {
         super.addListener(SWT.KeyUp, this);
         super.addListener(LightGrid.Event_ChangeSort, this);
         super.addListener(LightGrid.Event_NavigateLink, this);
-        super.addListener(LightGrid.Event_FilterColumn, this);
 
         tableEditor = new SpreadsheetCellEditor(this);
         tableEditor.horizontalAlignment = SWT.LEFT;
@@ -269,7 +257,10 @@ public class Spreadsheet extends LightGrid implements Listener {
                         if (!editorControl.isDisposed()) {
                             // We used to forward key even to control but it worked poorly.
                             // So let's just insert first letter (it will remove old value which must be selected for inline controls)
-                            String strValue = String.valueOf(event.character);
+                            String strValue = String.valueOf((char)event.keyCode);
+                            if ((event.stateMask & SWT.SHIFT) != 0) {
+                                strValue = strValue.toUpperCase();
+                            }
                             if (editorControl instanceof Text) {
                                 ((Text) editorControl).insert(strValue);
                             } else if (editorControl instanceof StyledText) {
@@ -319,12 +310,6 @@ public class Spreadsheet extends LightGrid implements Listener {
             case LightGrid.Event_ChangeSort:
                 presentation.changeSorting(event.data, event.stateMask);
                 break;
-            case LightGrid.Event_FilterColumn:
-            	//showFiltersMenu
-            	presentation.showFiltering(event.data);
-            	
-            	
-            	break;                
             case LightGrid.Event_NavigateLink:
                 // Perform navigation async because it may change grid content and
                 // we don't want to mess current grid state
@@ -347,7 +332,7 @@ public class Spreadsheet extends LightGrid implements Listener {
 
     private void hookContextMenu()
     {
-        MenuManager menuMgr = new MenuManager(null, AbstractPresentation.RESULT_SET_PRESENTATION_CONTEXT_MENU);
+        MenuManager menuMgr = new MenuManager();
         Menu menu = menuMgr.createContextMenu(this);
         menuMgr.addMenuListener(new IMenuListener() {
             @Override
@@ -363,7 +348,7 @@ public class Spreadsheet extends LightGrid implements Listener {
         });
         menuMgr.setRemoveAllWhenShown(true);
         super.setMenu(menu);
-        site.registerContextMenu(menuMgr, presentation);
+        site.registerContextMenu(menuMgr, null);
     }
 
     public void cancelInlineEditor()

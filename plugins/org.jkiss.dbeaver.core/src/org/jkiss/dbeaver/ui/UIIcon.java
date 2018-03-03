@@ -92,6 +92,7 @@ public class UIIcon {
     public static final DBIcon SORT_INCREASE = new DBIcon("sort_increase", "misc/sort_increase.png"); //$NON-NLS-1$ //$NON-NLS-2$
     public static final DBIcon SORT_DECREASE = new DBIcon("sort_decrease", "misc/sort_decrease.png"); //$NON-NLS-1$ //$NON-NLS-2$
     public static final DBIcon SORT_UNKNOWN = new DBIcon("sort_unknown", "misc/sort_unknown.png"); //$NON-NLS-1$ //$NON-NLS-2$
+    public static final DBIcon FRAME_QUERY = new DBIcon("frame_query", "misc/frame_query.png"); //$NON-NLS-1$ //$NON-NLS-2$
     public static final DBIcon SORT = new DBIcon("sort", "misc/sort.png"); //$NON-NLS-1$ //$NON-NLS-2$
 
     public static final DBIcon FILTER = new DBIcon("filter", "misc/filter.png"); //$NON-NLS-1$ //$NON-NLS-2$
@@ -182,14 +183,6 @@ public class UIIcon {
 
     public static final DBIcon PAGES = new DBIcon("pages", "misc/pages.png"); //$NON-NLS-1$ //$NON-NLS-2$
     public static final DBIcon TEXTFIELD = new DBIcon("textfield", "misc/textfield.png"); //$NON-NLS-1$ //$NON-NLS-2$
-
-    public static final DBIcon ACTION_USER = new DBIcon("action_user", "actions/user.png"); //$NON-NLS-1$ //$NON-NLS-2$
-    public static final DBIcon ACTION_USER_ADD = new DBIcon("action_user_add", "actions/user_add.png"); //$NON-NLS-1$ //$NON-NLS-2$
-    public static final DBIcon ACTION_USER_DELETE = new DBIcon("action_user_delete", "actions/user_delete.png"); //$NON-NLS-1$ //$NON-NLS-2$
-
-    public static final DBIcon ACTION_OBJECT = new DBIcon("action_object", "actions/object.png"); //$NON-NLS-1$ //$NON-NLS-2$
-    public static final DBIcon ACTION_OBJECT_ADD = new DBIcon("action_object_add", "actions/object_add.png"); //$NON-NLS-1$ //$NON-NLS-2$
-    public static final DBIcon ACTION_OBJECT_DELETE = new DBIcon("action_object_delete", "actions/object_delete.png"); //$NON-NLS-1$ //$NON-NLS-2$
 
     static  {
         DBIcon.loadIcons(UIIcon.class);

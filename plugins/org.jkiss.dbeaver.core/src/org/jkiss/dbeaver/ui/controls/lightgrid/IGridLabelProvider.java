@@ -26,8 +26,6 @@ import org.jkiss.code.Nullable;
 
 public interface IGridLabelProvider extends IColorProvider, IFontProvider, IToolTipProvider {
 
-    String OPTION_EXCLUDE_COLUMN_NAME_FOR_WIDTH_CALC = "OPTION_EXCLUDE_COLUMN_NAME_FOR_WIDTH_CALC";
-
     @NotNull
     String getText(Object element);
 
@@ -36,7 +34,5 @@ public interface IGridLabelProvider extends IColorProvider, IFontProvider, ITool
 
     @Nullable
     Image getImage(Object element);
-
-    Object getGridOption(String option);
 
 }

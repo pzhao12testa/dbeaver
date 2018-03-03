@@ -41,8 +41,6 @@ public interface DBSTableIndex extends DBSEntityConstraint, DBSEntityReferrer, D
 
     boolean isUnique();
 
-    boolean isPrimary();
-
     DBSIndexType getIndexType();
 
     List<? extends DBSTableIndexColumn> getAttributeReferences(DBRProgressMonitor monitor)

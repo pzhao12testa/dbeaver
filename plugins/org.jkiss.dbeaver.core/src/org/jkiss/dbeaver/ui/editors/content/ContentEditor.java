@@ -21,14 +21,12 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IContributionManager;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.*;
-import org.eclipse.ui.part.MultiPageEditorSite;
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
@@ -40,18 +38,14 @@ import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.runtime.DBRRunnableWithProgress;
 import org.jkiss.dbeaver.runtime.ui.DBUserInterface;
 import org.jkiss.dbeaver.ui.IRefreshablePart;
-import org.jkiss.dbeaver.ui.UIUtils;
-import org.jkiss.dbeaver.ui.controls.resultset.IResultSetContainer;
 import org.jkiss.dbeaver.ui.data.IStreamValueManager;
 import org.jkiss.dbeaver.ui.data.IValueController;
 import org.jkiss.dbeaver.ui.data.IValueEditorStandalone;
-import org.jkiss.dbeaver.ui.data.managers.stream.TextStreamValueManager;
 import org.jkiss.dbeaver.ui.data.registry.StreamValueManagerDescriptor;
 import org.jkiss.dbeaver.ui.data.registry.ValueManagerRegistry;
 import org.jkiss.dbeaver.ui.dialogs.ColumnInfoPanel;
 import org.jkiss.dbeaver.ui.dialogs.DialogUtils;
 import org.jkiss.dbeaver.ui.editors.MultiPageAbstractEditor;
-import org.jkiss.dbeaver.ui.editors.entity.EntityEditor;
 import org.jkiss.dbeaver.utils.RuntimeUtils;
 
 import java.io.File;
@@ -72,12 +66,14 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
     }
 
     @Nullable
-    public static ContentEditor openEditor(IValueController valueController)
+    public static ContentEditor openEditor(IValueController valueController, DBDContent content)
     {
         ContentEditorInput editorInput;
         // Save data to file
         try {
-            LOBInitializer initializer = new LOBInitializer(valueController);
+            LOBInitializer initializer = new LOBInitializer(
+                valueController,
+                content);
             //valueController.getValueSite().getWorkbenchWindow().run(true, true, initializer);
             DBeaverUI.runInProgressService(initializer);
             editorInput = initializer.editorInput;
@@ -118,14 +114,14 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
 
     private static class LOBInitializer implements DBRRunnableWithProgress {
         IValueController valueController;
-        Object value;
+        DBDContent content;
         IEditorPart[] editorParts;
         IEditorPart defaultPart;
         ContentEditorInput editorInput;
 
-        public LOBInitializer(IValueController valueController) {
+        public LOBInitializer(IValueController valueController, DBDContent content) {
             this.valueController = valueController;
-            this.value = valueController.getValue();
+            this.content = content;
         }
 
         private LOBInitializer(IValueController valueController, IEditorPart[] editorParts, IEditorPart defaultPart, @Nullable ContentEditorInput editorInput)
@@ -140,47 +136,40 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
         public void run(DBRProgressMonitor monitor) throws InvocationTargetException, InterruptedException
         {
             try {
-                if (value != null && editorParts == null) {
+                if (content != null && editorParts == null) {
+                    Map<StreamValueManagerDescriptor, IStreamValueManager.MatchType> streamManagers =
+                        ValueManagerRegistry.getInstance().getApplicableStreamManagers(monitor, valueController.getValueType(), content);
                     List<IEditorPart> parts = new ArrayList<>();
-                    if (value instanceof String) {
-                        TextStreamValueManager valueManager = new TextStreamValueManager();
-                        defaultPart = valueManager.createEditorPart(valueController);
-                        parts.add(defaultPart);
-                    } else if (value instanceof DBDContent) {
-                        DBDContent content = (DBDContent) value;
-                        Map<StreamValueManagerDescriptor, IStreamValueManager.MatchType> streamManagers =
-                            ValueManagerRegistry.getInstance().getApplicableStreamManagers(monitor, valueController.getValueType(), content);
-                        IStreamValueManager.MatchType defaultMatch = null;
-                        for (Map.Entry<StreamValueManagerDescriptor, IStreamValueManager.MatchType> entry : streamManagers.entrySet()) {
-                            IStreamValueManager streamValueManager = entry.getKey().getInstance();
-                            try {
-                                IEditorPart editorPart = streamValueManager.createEditorPart(valueController);
-                                IStreamValueManager.MatchType matchType = entry.getValue();
-                                if (defaultPart == null) {
+                    IStreamValueManager.MatchType defaultMatch = null;
+                    for (Map.Entry<StreamValueManagerDescriptor, IStreamValueManager.MatchType> entry : streamManagers.entrySet()) {
+                        IStreamValueManager streamValueManager = entry.getKey().getInstance();
+                        try {
+                            IEditorPart editorPart = streamValueManager.createEditorPart(valueController);
+                            IStreamValueManager.MatchType matchType = entry.getValue();
+                            if (defaultPart == null) {
+                                defaultPart = editorPart;
+                                defaultMatch = matchType;
+                            } else {
+                                boolean setDefault = false;
+                                switch (matchType) {
+                                    case EXCLUSIVE:
+                                    case PRIMARY:
+                                        setDefault = true;
+                                        break;
+                                    case DEFAULT:
+                                        setDefault = (defaultMatch == IStreamValueManager.MatchType.APPLIES);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                if (setDefault) {
                                     defaultPart = editorPart;
                                     defaultMatch = matchType;
-                                } else {
-                                    boolean setDefault = false;
-                                    switch (matchType) {
-                                        case EXCLUSIVE:
-                                        case PRIMARY:
-                                            setDefault = true;
-                                            break;
-                                        case DEFAULT:
-                                            setDefault = (defaultMatch == IStreamValueManager.MatchType.APPLIES);
-                                            break;
-                                        default:
-                                            break;
-                                    }
-                                    if (setDefault) {
-                                        defaultPart = editorPart;
-                                        defaultMatch = matchType;
-                                    }
                                 }
-                                parts.add(editorPart);
-                            } catch (DBException e) {
-                                log.error(e);
                             }
+                            parts.add(editorPart);
+                        } catch (DBException e) {
+                            log.error(e);
                         }
                     }
                     editorParts = parts.toArray(new IEditorPart[parts.size()]);
@@ -257,20 +246,7 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
 
                     ContentEditorInput editorInput = getEditorInput();
                     editorInput.updateContentFromFile(monitor);
-                    editorInput.getValueController().updateValue(editorInput.getValue(), true);
-
-                    // Activate owner editor and focus on cell corresponding to this content editor
-                    IWorkbenchPartSite parentEditorSite = editorInput.getValueController().getValueSite();
-                    IWorkbenchPart parentEditor;
-                    if (parentEditorSite instanceof MultiPageEditorSite) {
-                        parentEditor = ((MultiPageEditorSite) parentEditorSite).getMultiPageEditor();
-                        if (parentEditor instanceof EntityEditor) {
-                            ((EntityEditor) parentEditor).setActiveEditor(IResultSetContainer.class);
-                        }
-                    } else {
-                        parentEditor = parentEditorSite.getPart();
-                    }
-                    parentEditorSite.getWorkbenchWindow().getActivePage().activate(parentEditor);
+                    editorInput.getValueController().updateValue(editorInput.getContent(), true);
 
                     // Close editor
                     closeValueEditor();
@@ -324,6 +300,11 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
     {
         super.init(site, input);
         setPartName(input.getName());
+
+        DBDContent content = getContent();
+        if (content == null) {
+            return;
+        }
 
         // Fill nested editorParts info
         IEditorPart[] editorParts = getEditorInput().getEditors();
@@ -386,6 +367,10 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
     @Override
     protected void createPages() {
         super.createPages();
+        DBDContent content = getContent();
+        if (content == null) {
+            return;
+        }
         ContentPartInfo defaultPage = null;
         for (ContentPartInfo contentPart : contentParts) {
             if (contentPart.isDefault) {
@@ -424,15 +409,13 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
     @Override
     protected Composite createPageContainer(Composite parent)
     {
-        SashForm panel = UIUtils.createPartDivider(this, parent, SWT.VERTICAL);
-/*
+        Composite panel = new Composite(parent, SWT.NONE);
         GridLayout layout = new GridLayout(1, false);
         layout.marginHeight = 0;
         layout.marginWidth = 0;
         layout.verticalSpacing = 0;
         layout.horizontalSpacing = 0;
         panel.setLayout(layout);
-*/
         if (parent.getLayout() instanceof GridLayout) {
             panel.setLayoutData(new GridData(GridData.FILL_BOTH));
         }
@@ -444,39 +427,42 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
             GridData gd = new GridData(GridData.FILL_HORIZONTAL);
             gd.exclude = true;
             infoPanel.setLayoutData(gd);
+            infoPanel.setVisible(false);
         }
 
-        Composite editorPanel = new Composite(panel, SWT.NONE);
-        GridLayout layout = new GridLayout(1, false);
+        Composite editotPanel = new Composite(panel, SWT.NONE);
+        layout = new GridLayout(1, false);
         layout.marginHeight = 0;
         layout.marginWidth = 0;
         layout.verticalSpacing = 0;
         layout.horizontalSpacing = 0;
-        editorPanel.setLayout(layout);
-        editorPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
+        editotPanel.setLayout(layout);
+        editotPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-        panel.setMaximizedControl(editorPanel);
-
-        return editorPanel;
+        return editotPanel;
     }
 
     void toggleInfoBar()
     {
-        SashForm sashForm = (SashForm) infoPanel.getParent();
-        boolean visible = sashForm.getMaximizedControl() == null;
-        if (visible) {
-            sashForm.setMaximizedControl(sashForm.getChildren()[1]);
-        } else {
-            sashForm.setMaximizedControl(null);
-            infoPanel.layoutProperties();
-        }
+        boolean visible = infoPanel.isVisible();
+        visible = !visible;
+        GridData gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.exclude = !visible;
+        infoPanel.setLayoutData(gd);
+        infoPanel.setVisible(visible);
+        infoPanel.getParent().layout();
     }
 
     @Nullable
-    Object getValue()
+    DBDContent getContent()
     {
         IValueController valueController = getValueController();
-        return valueController == null? null : valueController.getValue();
+        Object value = valueController == null? null : valueController.getValue();
+        if (value instanceof DBDContent) {
+            return (DBDContent) value;
+        } else {
+            return null;
+        }
     }
 
     @Nullable
@@ -494,13 +480,8 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
     @Override
     public Control getControl()
     {
-        // Return container control
-        // Don't return active page because container may be already disposed (#2805)
-        return super.getContainer();
-/*
         int activePage = getActivePage();
         return activePage < 0 ? null : getControl(activePage);
-*/
     }
 
     @Override
@@ -518,7 +499,7 @@ public class ContentEditor extends MultiPageAbstractEditor implements IValueEdit
             }
         });
 
-        return getEditorInput().getValue();
+        return getEditorInput().getContent();
     }
 
     @Override

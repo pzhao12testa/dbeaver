@@ -136,7 +136,7 @@ public class MySQLTable extends MySQLTableBase
         if (source instanceof DBSTable) {
             // Copy indexes
             for (DBSTableIndex srcIndex : CommonUtils.safeCollection(((DBSTable)source).getIndexes(monitor))) {
-                if (srcIndex instanceof MySQLTableIndex && srcIndex.isPrimary()) {
+                if (srcIndex instanceof MySQLTableIndex && srcIndex.getName().equals(MySQLConstants.INDEX_PRIMARY)) {
                     // Skip primary key index (it will be created implicitly)
                     continue;
                 }
@@ -450,8 +450,8 @@ public class MySQLTable extends MySQLTableBase
     }
 
     @Override
-    public String getObjectDefinitionText(DBRProgressMonitor monitor, Map<String, Object> options) throws DBException {
-        return getDDL(monitor, options);
+    public String getObjectDefinitionText(DBRProgressMonitor monitor) throws DBException {
+        return getDDL(monitor);
     }
 
     @Override

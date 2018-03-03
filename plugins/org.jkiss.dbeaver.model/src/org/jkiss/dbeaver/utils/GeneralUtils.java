@@ -23,8 +23,6 @@ import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.ModelPreferences;
 import org.jkiss.dbeaver.bundle.ModelActivator;
-import org.jkiss.dbeaver.model.impl.app.ApplicationDescriptor;
-import org.jkiss.dbeaver.model.impl.app.ApplicationRegistry;
 import org.jkiss.utils.Base64;
 import org.jkiss.utils.CommonUtils;
 import org.jkiss.utils.StandardConstants;
@@ -38,7 +36,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -82,7 +79,7 @@ public class GeneralUtils {
         }
     }
 
-    private static Pattern VAR_PATTERN = Pattern.compile("(\\$\\{([\\w\\.\\-]+)\\})", Pattern.CASE_INSENSITIVE);
+    public static Pattern VAR_PATTERN = Pattern.compile("(\\$\\{([\\w\\.\\-]+)\\})", Pattern.CASE_INSENSITIVE);
 
     /**
      * Default encoding (UTF-8)
@@ -269,24 +266,6 @@ public class GeneralUtils {
     }
 
     @NotNull
-    public static IStatus makeErrorStatus(String message) {
-        return new Status(
-            IStatus.ERROR,
-            ModelPreferences.PLUGIN_ID,
-            message,
-            null);
-    }
-
-    @NotNull
-    public static IStatus makeErrorStatus(String message, Throwable e) {
-        return new Status(
-            IStatus.ERROR,
-            ModelPreferences.PLUGIN_ID,
-            message,
-            e);
-    }
-
-    @NotNull
     public static String getProductTitle()
     {
         return getProductName() + " " + getProductVersion();
@@ -295,24 +274,16 @@ public class GeneralUtils {
     @NotNull
     public static String getProductName()
     {
-        ApplicationDescriptor application = ApplicationRegistry.getInstance().getApplication();
-        if (application != null) {
-            return ApplicationRegistry.getInstance().getApplication().getName();
-        }
         final IProduct product = Platform.getProduct();
-        if (product != null) {
-            return product.getName();
+        if (product == null) {
+            return "DBeaver";
         }
-        return "DBeaver";
+        return product.getName();
     }
 
     @NotNull
     public static Version getProductVersion()
     {
-        ApplicationDescriptor application = ApplicationRegistry.getInstance().getApplication();
-        if (application != null) {
-            return application.getContributorBundle().getVersion();
-        }
         final IProduct product = Platform.getProduct();
         if (product == null) {
             return ModelActivator.getInstance().getBundle().getVersion();
@@ -322,38 +293,27 @@ public class GeneralUtils {
 
     @NotNull
     public static Date getProductReleaseDate() {
-        Bundle definingBundle = null;
-        ApplicationDescriptor application = ApplicationRegistry.getInstance().getApplication();
-        if (application != null) {
-            definingBundle = application.getContributorBundle();
-        } else {
-            final IProduct product = Platform.getProduct();
-            if (product != null) {
-                definingBundle = product.getDefiningBundle();
+        final IProduct product = Platform.getProduct();
+        if (product != null) {
+            Bundle definingBundle = product.getDefiningBundle();
+            final Dictionary<String, String> headers = definingBundle.getHeaders();
+            final String releaseDate = headers.get("Bundle-Release-Date");
+            if (releaseDate != null) {
+                try {
+                    return new SimpleDateFormat(DEFAULT_DATE_PATTERN).parse(releaseDate);
+                } catch (ParseException e) {
+                    log.debug(e);
+                }
+            }
+            final String buildTime = headers.get("Build-Time");
+            if (buildTime != null) {
+                try {
+                    return new SimpleDateFormat(DEFAULT_TIMESTAMP_PATTERN).parse(buildTime);
+                } catch (ParseException e) {
+                    log.debug(e);
+                }
             }
         }
-        if (definingBundle == null) {
-            return new Date();
-        }
-
-        final Dictionary<String, String> headers = definingBundle.getHeaders();
-        final String releaseDate = headers.get("Bundle-Release-Date");
-        if (releaseDate != null) {
-            try {
-                return new SimpleDateFormat(DEFAULT_DATE_PATTERN).parse(releaseDate);
-            } catch (ParseException e) {
-                log.debug(e);
-            }
-        }
-        final String buildTime = headers.get("Build-Time");
-        if (buildTime != null) {
-            try {
-                return new SimpleDateFormat(DEFAULT_TIMESTAMP_PATTERN).parse(buildTime);
-            } catch (ParseException e) {
-                log.debug(e);
-            }
-        }
-
         // Failed to get valid date from product bundle
         final Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.YEAR, 2017);
@@ -380,43 +340,9 @@ public class GeneralUtils {
         }
     }
 
-    public static String replaceSystemEnvironmentVariables(String string) {
-        if (string == null) {
-            return null;
-        }
-        return replaceVariables(string, new GeneralUtils.IVariableResolver() {
-            @Override
-            public String get(String name) {
-                return System.getenv(name);
-            }
-        });
-    }
-
     @NotNull
     public static String variablePattern(String name) {
         return "${" + name + "}";
-    }
-
-    @NotNull
-    public static boolean isVariablePattern(String pattern) {
-        return pattern.startsWith("${") && pattern.endsWith("}");
-    }
-
-    @NotNull
-    public static String stripVariablePattern(String pattern) {
-        if (isVariablePattern(pattern)) {
-            return pattern.substring(2, pattern.length() - 1);
-        }
-        return pattern;
-    }
-
-    @NotNull
-    public static String generateVariablesLegend(@NotNull String[][] vars) {
-        StringBuilder text = new StringBuilder();
-        for (String[] var : vars) {
-            text.append(GeneralUtils.variablePattern(var[0])).append("\t- ").append(var[1]).append("\n");
-        }
-        return text.toString();
     }
 
     @NotNull
@@ -459,51 +385,26 @@ public class GeneralUtils {
         return makeExceptionStatus(IStatus.ERROR, ex);
     }
 
-    public static IStatus makeExceptionStatus(int severity, Throwable ex) {
-        return makeExceptionStatus(severity, ex, false);
-    }
-
-    private static IStatus makeExceptionStatus(int severity, Throwable ex, boolean nested)
+    public static IStatus makeExceptionStatus(int severity, Throwable ex)
     {
         Throwable cause = ex.getCause();
-        SQLException nextError = null;
-        if (ex instanceof SQLException) {
-            nextError = ((SQLException) ex).getNextException();
-        }
-        if (cause == null && nextError == null) {
+        if (cause == null) {
             return new Status(
                 severity,
                 ModelPreferences.PLUGIN_ID,
                 getExceptionMessage(ex),
                 ex);
         } else {
-            if (nextError != null) {
-                List<IStatus> errorChain = new ArrayList<>();
-                if (cause != null) {
-                    errorChain.add(makeExceptionStatus(severity, cause, true));
-                }
-                for (SQLException error = nextError; error != null; error = error.getNextException()) {
-                    errorChain.add(new Status(
-                        severity,
-                        ModelPreferences.PLUGIN_ID,
-                        getExceptionMessage(error)));
-                }
-                return new MultiStatus(
-                    ModelPreferences.PLUGIN_ID,
-                    0,
-                    errorChain.toArray(new IStatus[errorChain.size()]),
-                    getExceptionMessage(ex),
-                    ex);
-            } else {
-                // Pass null exception to avoid dups in error message.
-                // Real exception stacktrace will be passed in the root cause
-                return new MultiStatus(
-                    ModelPreferences.PLUGIN_ID,
-                    0,
-                    new IStatus[]{makeExceptionStatus(severity, cause, true)},
-                    getExceptionMessage(ex),
-                    nested ? null : ex);
+            if (ex instanceof DBException && CommonUtils.equalObjects(ex.getMessage(), cause.getMessage())) {
+                // Skip empty duplicate DBException
+                return makeExceptionStatus(cause);
             }
+            return new MultiStatus(
+                ModelPreferences.PLUGIN_ID,
+                0,
+                new IStatus[]{makeExceptionStatus(severity, cause)},
+                getExceptionMessage(ex),
+                ex);
         }
     }
 
@@ -532,14 +433,14 @@ public class GeneralUtils {
     }
 
     public static String getStatusText(IStatus status) {
-        StringBuilder text = new StringBuilder(status.getMessage());
+        String text = status.getMessage();
         IStatus[] children = status.getChildren();
         if (children != null && children.length > 0) {
             for (IStatus child : children) {
-                text.append("\n").append(getStatusText(child));
+                text += "\n" + getStatusText(child);
             }
         }
-        return text.toString();
+        return text;
     }
 
     /**

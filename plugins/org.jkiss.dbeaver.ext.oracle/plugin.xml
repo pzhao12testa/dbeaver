@@ -102,10 +102,6 @@
                                         </items>
                                     </items>
                                 </folder>
-                                <folder type="org.jkiss.dbeaver.ext.oracle.model.OraclePrivTable" label="%tree.table_privileges.node.name" icon="#permissions" description="View Privileges" navigable="false">
-                                    <items label="%tree.privilege.node.name" path="tablePrivs" property="tablePrivs" icon="#privilege">
-                                    </items>
-                                </folder>
                             </items>
                         </folder>
                         <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleMaterializedView" label="%tree.materialized_views.node.name" icon="#folder_view" description="Materialized Views">
@@ -114,10 +110,6 @@
                         </folder>
                         <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleSequence" label="%tree.sequences.node.name" icon="#sequences" description="Sequences">
                             <items label="%tree.sequence.node.name" path="sequence" property="sequences" icon="#sequence">
-                            </items>
-                        </folder>
-                        <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleQueue" label="%tree.queues.node.name" description="Queues">
-                            <items label="%tree.queue.node.name" path="queues" property="queues">
                             </items>
                         </folder>
                         <folder type="org.jkiss.dbeaver.ext.oracle.model.OracleDataType" label="%tree.types.node.name" icon="#data_types" description="Types">
@@ -297,13 +289,6 @@
                     <fileSource url="http://www.oracle.com/technetwork/database/index-100632.html" name="Oracle XML Developers Kit">
                         <file name="xmlparserv2.jar " description="XML Parser"/>
                     </fileSource>
-
-                    <file type="license" path="drivers/oracle/LICENSE.txt" bundle="drivers.oracle"/>
-                    <file type="jar" path="drivers/oracle/ojdbc6.jar" bundle="drivers.oracle"/>
-                    <file type="jar" path="drivers/oracle/orai18n.jar" bundle="drivers.oracle"/>
-                    <file type="jar" path="drivers/oracle/xdb.jar" bundle="drivers.oracle"/>
-                    <file type="jar" path="drivers/oracle/xmlparserv2.jar" bundle="drivers.oracle"/>
-
                 </driver>
             </drivers>
             <views>
@@ -426,8 +411,7 @@
 
     <extension point="org.jkiss.dbeaver.tools">
         <tools>
-            <toolGroup id="org.jkiss.dbeaver.ext.oracle.tools.statistics" label="Statistics"/>
-            <toolGroup id="org.jkiss.dbeaver.ext.oracle.tools.maintenance" label="Maintenance"/>
+            <toolGroup id="org.jkiss.dbeaver.ext.oracle.tools.maintenance" label="Statistics"/>
             <tool
                     class="org.jkiss.dbeaver.ext.oracle.tools.OracleToolScript"
                     description="Execute script with native client"
@@ -440,7 +424,6 @@
                     class="org.jkiss.dbeaver.ext.oracle.tools.maintenance.OracleToolValidateStructure"
                     description="Validate Structure"
                     id="org.jkiss.dbeaver.ext.oracle.tools.maintenance.OracleToolTruncate"
-                    group="org.jkiss.dbeaver.ext.oracle.tools.statistics"
                     label="Validate Structure"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.oracle.model.OracleTable"/>
@@ -449,7 +432,6 @@
                     class="org.jkiss.dbeaver.ext.oracle.tools.maintenance.OracleToolGatherStatistics"
                     description="Gather statistics"
                     id="org.jkiss.dbeaver.ext.oracle.tools.maintenance.OracleToolGatherStatistics"
-                    group="org.jkiss.dbeaver.ext.oracle.tools.statistics"
                     label="Gather Statistics"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.oracle.model.OracleTable"/>
@@ -460,7 +442,6 @@
                     class="org.jkiss.dbeaver.ext.oracle.tools.maintenance.OracleToolTruncate"
                     description="Truncate table"
                     id="org.jkiss.dbeaver.ext.oracle.tools.maintenance.OracleToolTruncate"
-                    group="org.jkiss.dbeaver.ext.oracle.tools.maintenance"
                     label="Truncate"
                     singleton="false">
                 <objectType name="org.jkiss.dbeaver.ext.oracle.model.OracleTable"/>

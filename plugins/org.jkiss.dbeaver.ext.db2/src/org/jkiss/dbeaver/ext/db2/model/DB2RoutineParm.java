@@ -126,7 +126,7 @@ public class DB2RoutineParm implements DBSProcedureParameter, DBSTypedObject, DB
     }
 
     @Override
-    public Integer getPrecision()
+    public int getPrecision()
     {
         // TODO Auto-generated method stub
         return 0;
@@ -200,7 +200,7 @@ public class DB2RoutineParm implements DBSProcedureParameter, DBSTypedObject, DB
 
     @Override
     @Property(viewable = true, order = 6)
-    public Integer getScale()
+    public int getScale()
     {
         return scale;
     }

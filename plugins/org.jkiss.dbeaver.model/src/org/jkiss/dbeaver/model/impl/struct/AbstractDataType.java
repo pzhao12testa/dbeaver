@@ -18,9 +18,9 @@ package org.jkiss.dbeaver.model.impl.struct;
 
 import org.jkiss.code.NotNull;
 import org.jkiss.code.Nullable;
-import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBUtils;
+import org.jkiss.dbeaver.model.exec.DBCException;
 import org.jkiss.dbeaver.model.exec.DBCLogicalOperator;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
 import org.jkiss.dbeaver.model.struct.DBSDataType;
@@ -73,7 +73,7 @@ public abstract class AbstractDataType<DS extends DBPDataSource> implements DBSD
     }
 
     @Override
-    public Integer getScale() {
+    public int getScale() {
         return 0;
     }
 
@@ -94,7 +94,7 @@ public abstract class AbstractDataType<DS extends DBPDataSource> implements DBSD
     }
 
     @Override
-    public Integer getPrecision() {
+    public int getPrecision() {
         return 0;
     }
 
@@ -111,7 +111,7 @@ public abstract class AbstractDataType<DS extends DBPDataSource> implements DBSD
 
     @Nullable
     @Override
-    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBException {
+    public DBSDataType getComponentType(@NotNull DBRProgressMonitor monitor) throws DBCException {
         return null;
     }
 

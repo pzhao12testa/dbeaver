@@ -34,7 +34,7 @@ import java.math.BigInteger;
 import java.sql.SQLException;
 import java.util.*;
 
-public class ExasolLockManager extends LockGraphManager
+public class ExasolLockManager extends LockGraphManager<ExasolLock, BigInteger>
 		implements DBAServerLockManager<ExasolLock, ExasolLockItem> {
 	
 	public static final String LOCK_QUERY = 
@@ -254,10 +254,10 @@ public class ExasolLockManager extends LockGraphManager
 	}
 
 	@Override
-	public Map<Object, ExasolLock> getLocks(DBCSession session,Map<String, Object> options) throws DBException
+	public Map<BigInteger, ExasolLock> getLocks(DBCSession session,Map<String, Object> options) throws DBException
 	{
 		try {
-			Map<Object, ExasolLock> locks = new HashMap<>(10);
+			Map<BigInteger, ExasolLock> locks = new HashMap<BigInteger,ExasolLock>(10);
 			
 			try (JDBCPreparedStatement dbStat = ((JDBCSession) session).prepareStatement(LOCK_QUERY)) {
 				try (JDBCResultSet dbResult = dbStat.executeQuery()) {
@@ -318,8 +318,10 @@ public class ExasolLockManager extends LockGraphManager
 			Map<String, Object> options) throws DBException
 	{
         try {
-
-			try (JDBCPreparedStatement dbStat = ((JDBCSession) session).prepareStatement("KILL SESSION " + lock.getHold_sid())) {
+        	
+        	StringBuilder sql = new StringBuilder("KILL SESSION ");
+        	sql.append(lock.getHold_sid());
+        	try (JDBCPreparedStatement dbStat = ((JDBCSession) session).prepareStatement(sql.toString())) {
                 dbStat.execute();
             }
         }

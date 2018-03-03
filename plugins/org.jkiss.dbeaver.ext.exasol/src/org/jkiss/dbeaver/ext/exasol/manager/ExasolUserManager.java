@@ -1,7 +1,6 @@
 package org.jkiss.dbeaver.ext.exasol.manager;
 
 import java.util.List;
-import java.util.Map;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.jkiss.dbeaver.DBException;
@@ -10,7 +9,6 @@ import org.jkiss.dbeaver.ext.exasol.manager.security.ExasolUser;
 import org.jkiss.dbeaver.ext.exasol.model.ExasolDataSource;
 import org.jkiss.dbeaver.ext.exasol.ui.ExasolUserDialog;
 import org.jkiss.dbeaver.ext.exasol.ui.ExasolUserQueryPassword;
-import org.jkiss.dbeaver.model.DBPDataSource;
 import org.jkiss.dbeaver.model.DBUtils;
 import org.jkiss.dbeaver.model.edit.DBECommandContext;
 import org.jkiss.dbeaver.model.edit.DBEObjectRenamer;
@@ -26,7 +24,7 @@ import org.jkiss.utils.CommonUtils;
 public class ExasolUserManager extends SQLObjectEditor<ExasolUser, ExasolDataSource> implements DBEObjectRenamer<ExasolUser> {
 	
 	@Override
-	public long getMakerOptions(DBPDataSource dataSource)
+	public long getMakerOptions()
 	{
 		return FEATURE_SAVE_IMMEDIATELY;
 	}
@@ -62,7 +60,7 @@ public class ExasolUserManager extends SQLObjectEditor<ExasolUser, ExasolDataSou
 
 	@Override
 	protected void addObjectCreateActions(List<DBEPersistAction> actions,
-										  ObjectCreateCommand command, Map<String, Object> options)
+			SQLObjectEditor<ExasolUser, ExasolDataSource>.ObjectCreateCommand command)
 	{
 		ExasolUser obj = command.getObject();
 		
@@ -85,7 +83,7 @@ public class ExasolUserManager extends SQLObjectEditor<ExasolUser, ExasolDataSou
 
 	@Override
 	protected void addObjectDeleteActions(List<DBEPersistAction> actions,
-                                          ObjectDeleteCommand command, Map<String, Object> options)
+			SQLObjectEditor<ExasolUser, ExasolDataSource>.ObjectDeleteCommand command)
 	{
 		ExasolUser obj = command.getObject();
 		actions.add(new SQLDatabasePersistAction("Drop User", "DROP USER " + DBUtils.getQuotedIdentifier(obj)));
@@ -108,7 +106,7 @@ public class ExasolUserManager extends SQLObjectEditor<ExasolUser, ExasolDataSou
 	
 	@Override
 	protected void addObjectRenameActions(List<DBEPersistAction> actions,
-                                          ObjectRenameCommand command, Map<String, Object> options)
+			SQLObjectEditor<ExasolUser, ExasolDataSource>.ObjectRenameCommand command)
 	{
 		ExasolUser obj = command.getObject();
         actions.add(
@@ -126,7 +124,7 @@ public class ExasolUserManager extends SQLObjectEditor<ExasolUser, ExasolDataSou
 	
 	@Override
 	protected void addObjectModifyActions(List<DBEPersistAction> actionList,
-										  ObjectChangeCommand command, Map<String, Object> options)
+			SQLObjectEditor<ExasolUser, ExasolDataSource>.ObjectChangeCommand command)
 	{
 		ExasolUser obj = command.getObject();
 		
