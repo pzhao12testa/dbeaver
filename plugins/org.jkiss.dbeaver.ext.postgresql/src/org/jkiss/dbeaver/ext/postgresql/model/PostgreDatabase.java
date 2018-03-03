@@ -45,7 +45,9 @@ import org.jkiss.dbeaver.model.struct.rdb.DBSCatalog;
 import org.jkiss.utils.LongKeyMap;
 
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * PostgreDatabase
@@ -58,6 +60,7 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
     private long oid;
     private String name;
     private long ownerId;
+    private String templateName;
     private long encodingId;
     private String collate;
     private String ctype;
@@ -96,6 +99,16 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
         this.allowConnect = JDBCUtils.safeGetBoolean(dbResult, "datallowconn");
         this.connectionLimit = JDBCUtils.safeGetInt(dbResult, "datconnlimit");
         this.tablespaceId = JDBCUtils.safeGetLong(dbResult, "dattablespace");
+    }
+
+    public PostgreDatabase(PostgreDataSource dataSource, String name, PostgreRole owner, String templateName, PostgreTablespace tablespace, PostgreCharset encoding)
+    {
+        this.dataSource = dataSource;
+        this.name = name;
+        this.ownerId = owner.getObjectId();
+        this.templateName = templateName;
+        this.tablespaceId = tablespace.getObjectId();
+        this.encodingId = encoding.getObjectId();
     }
 
     @NotNull
@@ -143,6 +156,10 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
 
     ///////////////////////////////////////////////////
     // Properties
+
+    public String getTemplateName() {
+        return templateName;
+    }
 
     @Property(viewable = false, order = 3)
     public PostgreRole getDBA(DBRProgressMonitor monitor) throws DBException {
@@ -344,15 +361,8 @@ public class PostgreDatabase implements DBSInstance, DBSCatalog, DBPRefreshableO
 
     @Override
     public DBSObject refreshObject(@NotNull DBRProgressMonitor monitor) throws DBException {
-        roleCache.clearCache();
-        accessMethodCache.clearCache();
-        languageCache.clearCache();
-        encodingCache.clearCache();
-        tablespaceCache.clearCache();
-        schemaCache.clearCache();
-
-        cacheDataTypes(monitor);
-        return this;
+        // Refresh all properties
+        return dataSource.getDatabaseCache().refreshObject(monitor, dataSource, this);
     }
 
     public Collection<PostgreRole> getUsers(DBRProgressMonitor monitor) throws DBException {

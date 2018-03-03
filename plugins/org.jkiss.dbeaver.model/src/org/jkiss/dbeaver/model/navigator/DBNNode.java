@@ -18,13 +18,16 @@ package org.jkiss.dbeaver.model.navigator;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.jkiss.code.NotNull;
+import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.Log;
 import org.jkiss.dbeaver.model.DBIcon;
 import org.jkiss.dbeaver.model.DBPImage;
 import org.jkiss.dbeaver.model.DBPNamedObject;
 import org.jkiss.dbeaver.model.DBPPersistedObject;
+import org.jkiss.dbeaver.model.navigator.meta.DBXTreeFolder;
 import org.jkiss.dbeaver.model.runtime.DBRProgressMonitor;
+import org.jkiss.dbeaver.model.struct.DBSObject;
 import org.jkiss.utils.CommonUtils;
 
 import java.util.Collection;
@@ -105,6 +108,11 @@ public abstract class DBNNode implements DBPNamedObject, DBPPersistedObject, IAd
     public abstract String getNodeType();
 
     public abstract String getNodeName();
+
+    @Nullable
+    public String getNodeBriefInfo() {
+        return null;
+    }
 
     public abstract String getNodeDescription();
 
@@ -248,5 +256,24 @@ public abstract class DBNNode implements DBPNamedObject, DBPPersistedObject, IAd
             }
         });
     }
+
+    public static Class<? extends DBSObject> getFolderChildrenClass(DBXTreeFolder meta)
+    {
+        String itemsType = CommonUtils.toString(meta.getType());
+        if (CommonUtils.isEmpty(itemsType)) {
+            return null;
+        }
+        Class<DBSObject> aClass = meta.getSource().getObjectClass(itemsType, DBSObject.class);
+        if (aClass == null) {
+            log.error("Items class '" + itemsType + "' not found");
+            return null;
+        }
+        if (!DBSObject.class.isAssignableFrom(aClass)) {
+            log.error("Class '" + aClass.getName() + "' doesn't extend DBSObject");
+            return null;
+        }
+        return aClass ;
+    }
+
 
 }

@@ -43,7 +43,6 @@ import java.util.Map;
  */
 public class TabbedFolderComposite extends Composite implements ITabbedFolderContainer {
 
-    public static final int MIN_PANE_HEIGHT = 60;
     @NotNull
     private final Composite compositePane;
     @Nullable
@@ -54,6 +53,8 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
     private FolderPane[] folderPanes;
     private FolderPane lastActiveFolder = null;
 
+    private TabbedFolderState folderState;
+
     private class FolderPane {
         TabbedFolderInfo[] folders;
         TabbedFolderList folderList;
@@ -62,6 +63,8 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
         private Control curContent;
         @Nullable
         private ITabbedFolder curFolder;
+        @Nullable
+        private final Sash sash;
 
         public FolderPane(Composite parent, boolean last) {
             this.folderList = new TabbedFolderList(parent, !last);
@@ -74,11 +77,11 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
 
             editorPane = UIUtils.createPlaceholder(parent, 1);
             gd = new GridData(GridData.FILL_BOTH);
-            gd.heightHint = MIN_PANE_HEIGHT;
+            gd.heightHint = folderList.getTabHeight();
             editorPane.setLayoutData(gd);
 
             if (!last) {
-                final Sash sash = new Sash(parent, SWT.NONE);
+                sash = new Sash(parent, SWT.NONE);
                 gd = new GridData(GridData.FILL_HORIZONTAL);
                 gd.heightHint = TabbedFolderList.SECTION_DIV_HEIGHT;
                 sash.setLayoutData(gd);
@@ -100,11 +103,11 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
                         Rectangle sashBounds = sash.getBounds();
 
                         int shift = e.y - sashBounds.y;
-                        if (shift > 0 && shift > getNextFolderPane(FolderPane.this).editorPane.getBounds().height - MIN_PANE_HEIGHT) {
+                        if (shift > 0 && shift > getNextFolderPane(FolderPane.this).editorPane.getBounds().height - folderList.getTabHeight()) {
                             e.doit = false;
                             return;
                         }
-                        if (shift < 0 && Math.abs(shift) > editorPane.getBounds().height - MIN_PANE_HEIGHT) {
+                        if (shift < 0 && Math.abs(shift) > editorPane.getBounds().height - folderList.getTabHeight()) {
                             e.doit = false;
                             return;
                         }
@@ -118,6 +121,8 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
                         }
                     }
                 });
+            } else {
+                this.sash = null;
             }
 
             folderList.addSelectionListener(new SelectionAdapter() {
@@ -173,11 +178,13 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
 
     private void shiftPane(FolderPane curPane, int shift) {
         // Set current height to heightHint
+/*
         for (FolderPane pane : folderPanes) {
             Rectangle bounds = pane.editorPane.getBounds();
             GridData gd = (GridData) pane.editorPane.getLayoutData();
             gd.heightHint = bounds.height;
         }
+*/
 
         FolderPane nextPane = getNextFolderPane(curPane);
         ((GridData) curPane.editorPane.getLayoutData()).heightHint += shift;
@@ -240,8 +247,14 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
         });
     }
 
-    public void setFolders(@NotNull final TabbedFolderInfo[] folders) {
+    /**
+     * @param objectId ID used to save/load folders state
+     * @param folders  list of folders
+     */
+    public void setFolders(@NotNull final String objectId, @NotNull final TabbedFolderInfo[] folders) {
         this.folders = folders;
+
+        folderState = TabbedFoldersRegistry.getInstance().getFolderState(objectId);
 
         List<List<TabbedFolderInfo>> groups = new ArrayList<>();
         List<TabbedFolderInfo> curGroup = null;
@@ -275,11 +288,30 @@ public class TabbedFolderComposite extends Composite implements ITabbedFolderCon
             }
         }
         for (FolderPane folderPane : folderPanes) {
-            ((GridData)folderPane.folderList.getLayoutData()).widthHint = maxWidth;
+            GridData gd = (GridData) folderPane.folderList.getLayoutData();
+            // Try to get height info from first folder tab state
+            TabbedFolderState.TabState tabState = folderState.getTabState(folderPane.folders[0].getId(), true);
+            if (tabState.height > 0) {
+                gd.heightHint = tabState.height;
+            }
+            gd.widthHint = maxWidth;
+            gd.minimumHeight = folderPane.folderList.getTabHeight();
+            folderPane.folderList.addControlListener(new ControlAdapter() {
+                @Override
+                public void controlResized(ControlEvent e) {
+                    tabState.height = folderPane.folderList.getSize().y;
+                    TabbedFoldersRegistry.getInstance().saveConfig();
+                }
+            });
         }
 
         // Re-layout
         compositePane.layout();
+    }
+
+    @NotNull
+    public TabbedFolderState getFolderState() {
+        return folderState;
     }
 
     @Nullable

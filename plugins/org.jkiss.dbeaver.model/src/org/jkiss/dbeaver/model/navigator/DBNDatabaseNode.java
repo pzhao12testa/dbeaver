@@ -119,6 +119,15 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBSWrapper, DBP
     }
 
     @Override
+    public String getNodeBriefInfo() {
+        if (getObject() instanceof DBPToolTipObject) {
+            return ((DBPToolTipObject)getObject()).getObjectToolTip();
+        } else {
+            return super.getNodeBriefInfo();
+        }
+    }
+
+    @Override
     public String getNodeFullName()
     {
         if (getObject() instanceof DBPQualifiedObject) {
@@ -745,7 +754,7 @@ public abstract class DBNDatabaseNode extends DBNNode implements DBSWrapper, DBP
         }
     }
 
-    private Class<?> getChildrenClass(DBXTreeItem childMeta)
+    protected Class<?> getChildrenClass(DBXTreeItem childMeta)
     {
         Object valueObject = getValueObject();
         if (valueObject == null) {

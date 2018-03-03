@@ -46,6 +46,7 @@ import org.eclipse.ui.*;
 import org.eclipse.ui.actions.CompoundContributionItem;
 import org.eclipse.ui.menus.CommandContributionItem;
 import org.eclipse.ui.menus.CommandContributionItemParameter;
+import org.eclipse.ui.menus.IMenuService;
 import org.eclipse.ui.part.MultiPageEditorPart;
 import org.eclipse.ui.texteditor.ITextEditorActionDefinitionIds;
 import org.jkiss.code.NotNull;
@@ -53,6 +54,7 @@ import org.jkiss.code.Nullable;
 import org.jkiss.dbeaver.DBException;
 import org.jkiss.dbeaver.DBeaverPreferences;
 import org.jkiss.dbeaver.Log;
+import org.jkiss.dbeaver.ModelPreferences;
 import org.jkiss.dbeaver.core.CoreCommands;
 import org.jkiss.dbeaver.core.CoreMessages;
 import org.jkiss.dbeaver.core.DBeaverCore;
@@ -1114,6 +1116,18 @@ public class ResultSetViewer extends Viewer
         }
 
         {
+            ToolBarManager addToolbar = new ToolBarManager(SWT.FLAT | SWT.HORIZONTAL | SWT.RIGHT);
+            addToolbar.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+            final IMenuService menuService = getSite().getService(IMenuService.class);
+            if (menuService != null) {
+                menuService.populateContributionManager(addToolbar, "toolbar:org.jkiss.dbeaver.ui.controls.resultset.status");
+            }
+            addToolbar.update(true);
+            addToolbar.createControl(statusBar);
+            toolbarList.add(addToolbar);
+        }
+
+        {
             final int fontHeight = UIUtils.getFontHeight(statusBar);
             statusLabel = new StatusLabel(statusBar, SWT.NONE, this);
             statusLabel.setLayoutData(new RowData(40 * fontHeight, SWT.DEFAULT));
@@ -1322,6 +1336,15 @@ public class ResultSetViewer extends Viewer
         boolean hasWarnings = !dataReceiver.getErrorList().isEmpty();
         if (hasWarnings) {
             statusMessage += " - " + dataReceiver.getErrorList().size() + " warning(s)";
+        }
+        if (getPreferenceStore().getBoolean(DBeaverPreferences.RESULT_SET_SHOW_CONNECTION_NAME)) {
+            DBSDataContainer dataContainer = getDataContainer();
+            if (dataContainer != null) {
+                DBPDataSource dataSource = dataContainer.getDataSource();
+                if (dataSource != null) {
+                    statusMessage += " [" + dataSource.getContainer().getName() + "]";
+                }
+            }
         }
         setStatus(statusMessage, hasWarnings ? DBPMessageType.WARNING : DBPMessageType.INFORMATION);
 
@@ -1641,6 +1664,7 @@ public class ResultSetViewer extends Viewer
                     customizeAction.setEnabled(false);
                     viewMenu.add(customizeAction);
                 }
+                viewMenu.add(new TransformComplexTypesToggleAction());
                 if (getModel().isSingleSource()) {
                     if (valueController != null) {
                         viewMenu.add(new SetRowColorAction(attr, valueController.getValue()));
@@ -1729,6 +1753,7 @@ public class ResultSetViewer extends Viewer
                 }
             });
         }
+        manager.add(new GroupMarker("results_export"));
         manager.add(new GroupMarker(CoreCommands.GROUP_TOOLS));
         if (dataContainer != null && model.hasData()) {
             manager.add(new Separator());
@@ -1988,21 +2013,11 @@ public class ResultSetViewer extends Viewer
     }
 
     private void openResultsInNewWindow(DBRProgressMonitor monitor, DBSEntity targetEntity, final DBDDataFilter newFilter) {
-        final DBCExecutionContext executionContext = getExecutionContext();
-        if (executionContext == null) {
-            return;
+        if (targetEntity instanceof DBSDataContainer) {
+            getContainer().openNewContainer(monitor, (DBSDataContainer) targetEntity, newFilter);
+        } else {
+            UIUtils.showMessageBox(null, "Open link", "Target entity '" + DBUtils.getObjectFullName(targetEntity, DBPEvaluationContext.UI) + "' - is not a data container", SWT.ICON_ERROR);
         }
-        final DBNDatabaseNode targetNode = executionContext.getDataSource().getContainer().getPlatform().getNavigatorModel().getNodeByObject(monitor, targetEntity, false);
-        if (targetNode == null) {
-            UIUtils.showMessageBox(null, "Open link", "Can't navigate to '" + DBUtils.getObjectFullName(targetEntity, DBPEvaluationContext.UI) + "' - navigator node not found", SWT.ICON_ERROR);
-            return;
-        }
-        DBeaverUI.asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                openNewDataEditor(targetNode, newFilter);
-            }
-        });
     }
 
     @Override
@@ -2469,7 +2484,9 @@ public class ResultSetViewer extends Viewer
                                     restorePresentationState(presentationState);
                                 }
                             }
-                            activePresentation.updateValueView();
+                            if (metadataChanged) {
+                                activePresentation.updateValueView();
+                            }
                             updatePanelsContent(false);
 
                             if (!scroll) {
@@ -3230,6 +3247,35 @@ public class ResultSetViewer extends Viewer
         }
     }
 
+    private class TransformComplexTypesToggleAction extends Action {
+        TransformComplexTypesToggleAction()
+        {
+            super("Structurize complex types", AS_CHECK_BOX);
+            setToolTipText("Visualize complex types (arrays, structures, maps) in results grid as separate columns");
+        }
+
+        @Override
+        public boolean isChecked() {
+            DBPDataSource dataSource = getDataContainer().getDataSource();
+            return dataSource != null &&
+                dataSource.getContainer().getPreferenceStore().getBoolean(ModelPreferences.RESULT_TRANSFORM_COMPLEX_TYPES);
+        }
+
+        @Override
+        public void run()
+        {
+            DBPDataSource dataSource = getDataContainer().getDataSource();
+            if (dataSource == null) {
+                return;
+            }
+            DBPPreferenceStore preferenceStore = dataSource.getContainer().getPreferenceStore();
+            boolean curValue = preferenceStore.getBoolean(ModelPreferences.RESULT_TRANSFORM_COMPLEX_TYPES);
+            preferenceStore.setValue(ModelPreferences.RESULT_TRANSFORM_COMPLEX_TYPES, !curValue);
+            refreshData(null);
+        }
+
+    }
+
     private abstract class ColorAction extends Action {
         ColorAction(String name) {
             super(name);
@@ -3470,6 +3516,7 @@ public class ResultSetViewer extends Viewer
         }
     }
 
+/*
     public static void openNewDataEditor(DBNDatabaseNode targetNode, DBDDataFilter newFilter) {
         IEditorPart entityEditor = NavigatorHandlerObjectOpen.openEntityEditor(
             targetNode,
@@ -3489,5 +3536,6 @@ public class ResultSetViewer extends Viewer
             }
         }
     }
+*/
 
 }

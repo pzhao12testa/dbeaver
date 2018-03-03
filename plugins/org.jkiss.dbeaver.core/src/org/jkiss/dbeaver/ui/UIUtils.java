@@ -1303,9 +1303,9 @@ public class UIUtils {
         e.gc.drawText(message, (bounds.width - ext.x) / 2, bounds.height / 3 + offset);
     }
 
-    public static void launchProgram(String path)
+    public static boolean launchProgram(String path)
     {
-        Program.launch(path);
+        return Program.launch(path);
     }
 
     public static void fillDefaultStyledTextContextMenu(final StyledText text) {
@@ -1354,6 +1354,31 @@ public class UIUtils {
                 e.gc.drawImage(browseImage, bounds.width - iconBounds.width - 2, 0);
             }
         });
+    }
+
+    public static Combo createDelimiterCombo(Composite group, String label, String[] options, String defDelimiter, boolean multiDelims) {
+        createControlLabel(group, label);
+        Combo combo = new Combo(group, SWT.BORDER | SWT.DROP_DOWN);
+        combo.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        for (String option : options) {
+            combo.add(CommonUtils.escapeDisplayString(option));
+        }
+        if (!multiDelims) {
+            if (!ArrayUtils.contains(options, defDelimiter)) {
+                combo.add(CommonUtils.escapeDisplayString(defDelimiter));
+            }
+            String[] items = combo.getItems();
+            for (int i = 0, itemsLength = items.length; i < itemsLength; i++) {
+                String delim = CommonUtils.unescapeDisplayString(items[i]);
+                if (delim.equals(defDelimiter)) {
+                    combo.select(i);
+                    break;
+                }
+            }
+        } else {
+            combo.setText(CommonUtils.escapeDisplayString(defDelimiter));
+        }
+        return combo;
     }
 
     private static class StyledTextAction extends Action {
